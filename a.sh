@@ -36,10 +36,11 @@ read_xml_dom() {
 
 get_domain_id()
 {
-    domain=$1
+    login_token=$1
+    domain=$2
 
     local DOMLVL=0 #初始化节点
-    cat domain.xml |
+    curl -k https://dnsapi.cn/Domain.List -d "login_token=$login_token" 2>/dev/null |
     while read_xml_dom; do
         if [ "$ENTITY" = 'item' ]; then
             itemlevel=$DOMLVL
@@ -67,10 +68,12 @@ get_domain_id()
 
 get_record_id()
 {
-    record=$1
+    login_token=$1
+    record=$2
+    domain_id=$3
 
     local DOMLVL=0 #初始化节点
-    cat record.xml |
+    curl -k https://dnsapi.cn/Record.List -d "login_token=$login_token&domain_id=$domain_id" 2>/dev/null |
     while read_xml_dom; do
         if [ "$ENTITY" = 'item' ]; then
             itemlevel=$DOMLVL
@@ -96,5 +99,12 @@ get_record_id()
     done
 }
 
-echo $(get_domain_id 'yjbeetle.com.cn')
-echo $(get_record_id '_acme-challenge.home')
+. ./config.sh
+
+domain_id=$(get_domain_id $login_token $domain)
+record_id=$(get_record_id $login_token $record $domain_id)
+if [ "$record_id" = '' ]; then
+    echo '没有找到记录'
+fi
+
+echo "$record_id"
