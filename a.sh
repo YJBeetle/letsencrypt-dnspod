@@ -40,7 +40,7 @@ get_domain_id()
     domain=$2
 
     local DOMLVL=0 #初始化节点
-    curl -k https://dnsapi.cn/Domain.List -d "login_token=$login_token" 2>/dev/null |
+    curl -k https://dnsapi.cn/Domain.List -d "login_token=$login_token" 2>/dev/null >./tmp/get_domain_id.xml
     while read_xml_dom; do
         if [ "$ENTITY" = 'item' ]; then
             itemlevel=$DOMLVL
@@ -59,11 +59,24 @@ get_domain_id()
                 name=$CONTENT
             fi
             if [ "$name" = "$domain" ]; then
-                echo $id;
-                return 0;
+                okid=$id;
             fi
         fi
-    done
+        if [ "$ENTITY" = 'code' ]; then
+            code=$CONTENT
+        fi
+        if [ "$ENTITY" = 'message' ]; then
+            message="$CONTENT"
+        fi
+    done < ./tmp/get_domain_id.xml
+
+    if [ "$code" = '1' ]; then
+        echo "$okid";
+        return 0;
+    else
+        echo "$message";
+        return $code;
+    fi
 }
 
 get_record_id()
@@ -73,7 +86,7 @@ get_record_id()
     domain_id=$3
 
     local DOMLVL=0 #初始化节点
-    curl -k https://dnsapi.cn/Record.List -d "login_token=$login_token&domain_id=$domain_id" 2>/dev/null |
+    curl -k https://dnsapi.cn/Record.List -d "login_token=$login_token&domain_id=$domain_id" 2>/dev/null >./tmp/get_record_id.xml
     while read_xml_dom; do
         if [ "$ENTITY" = 'item' ]; then
             itemlevel=$DOMLVL
@@ -92,11 +105,24 @@ get_record_id()
                 name=$CONTENT
             fi
             if [ "$name" = "$record" ]; then
-                echo $id;
-                return 0;
+                okid=$id;
             fi
         fi
-    done
+        if [ "$ENTITY" = 'code' ]; then
+            code=$CONTENT
+        fi
+        if [ "$ENTITY" = 'message' ]; then
+            message="$CONTENT"
+        fi
+    done < ./tmp/get_record_id.xml
+
+    if [ "$code" = '1' ]; then
+        echo "$okid";
+        return 0;
+    else
+        echo "$message";
+        return $code;
+    fi
 }
 
 create_record()
@@ -107,7 +133,7 @@ create_record()
 
     local DOMLVL=0 #初始化节点
 
-    curl -k https://dnsapi.cn/Record.Create -d "login_token=$login_token&domain_id=$domain_id&sub_domain=$record&record_type=TXT&record_line=默认&value=null" 2>/dev/null >./tmp/tmp.xml
+    curl -k https://dnsapi.cn/Record.Create -d "login_token=$login_token&domain_id=$domain_id&sub_domain=$record&record_type=TXT&record_line=默认&value=null" 2>/dev/null >./tmp/create_record.xml
     while read_xml_dom; do
         if [ "$ENTITY" = 'id' ]; then
             id="$CONTENT"
@@ -118,7 +144,7 @@ create_record()
         if [ "$ENTITY" = 'message' ]; then
             message="$CONTENT"
         fi
-    done < ./tmp/tmp.xml
+    done < ./tmp/create_record.xml
 
     if [ "$code" = '1' ]; then
         echo "$id";
@@ -127,32 +153,55 @@ create_record()
         echo "$message";
         return $code;
     fi
+}
 
+clean()
+{
+#    rm -rf ./tmp/
+    :
 }
 
 echo -n '初始化...'
 mkdir -p ./tmp/
-echo 'done'
+echo '[done]'
 
 echo -n '读取配置文件...'
 . ./config.sh
-echo 'done'
+echo '[done]'
 
 echo -n '获取domain_id...'
-domain_id=$(get_domain_id $login_token $domain)
-echo "$domain_id"
+return=$(get_domain_id "$login_token" "$domain") || 
+{
+    echo '[error]'
+    echo "错误消息：$return" 1>&2
+    clean
+    exit 1
+}
+domain_id=$return
+echo "[$domain_id]"
 
 echo -n '获取record_id...'
-record_id=$(get_record_id $login_token $record $domain_id)
-echo "$record_id"
-
+return=$(get_record_id "$login_token" "$record" "$domain_id") || 
+{
+    echo '[error]'
+    echo "错误消息：$return" 1>&2
+    clean
+    exit 1
+}
+record_id=$return
 if [ "$record_id" = '' ]; then
+    echo '[null]'
+
     echo -n '没有找到对应record，创建record并获取id...'
-    record_id=$(create_record "$login_token" "$record" "$domain_id") || 
+    return=$(create_record "$login_token" "$record" "$domain_id") || 
     {
-        echo "[error]"
-        echo "错误消息：$record_id" 1>&2 
+        echo '[error]'
+        echo "错误消息：$return" 1>&2
+        clean
         exit 1
     }
-    echo "$record_id"
+    record_id=$return
+    echo "[$record_id]"
+else
+    echo "[$record_id]"
 fi
