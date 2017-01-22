@@ -157,8 +157,7 @@ create_record()
 
 clean()
 {
-#    rm -rf ./tmp/
-    :
+    rm -rf ./tmp/
 }
 
 echo -n '初始化...'
@@ -192,7 +191,7 @@ record_id=$return
 if [ "$record_id" = '' ]; then
     echo '[null]'
 
-    echo -n '没有找到对应record，创建record并获取id...'
+    echo -n '没有找到对应record_id，创建新record并获取id...'
     return=$(create_record "$login_token" "$record" "$domain_id") || 
     {
         echo '[error]'
@@ -205,3 +204,6 @@ if [ "$record_id" = '' ]; then
 else
     echo "[$record_id]"
 fi
+
+clean
+exit 0
