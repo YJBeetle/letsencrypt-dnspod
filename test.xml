@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<dnspod> 
+  <status> 
+    <code>1</code>  
+    <message>Action completed successful</message>  
+    <created_at>2017-01-21 10:15:12</created_at> 
+  </status>  
+  <info> 
+    <domain_total>8</domain_total>  
+    <all_total>8</all_total>  
+    <mine_total>8</mine_total>  
+    <share_total>0</share_total>  
+    <vip_total>0</vip_total>  
+    <ismark_total>0</ismark_total>  
+    <pause_total>0</pause_total>  
+    <error_total>2</error_total>  
+    <lock_total>0</lock_total>  
+    <spam_total>0</spam_total>  
+    <vip_expire>0</vip_expire>  
+    <share_out_total>0</share_out_total> 
+  </info>  
+  <domains> 
+    <item> 
+      <id>12345</id>  
+      <status>enable</status>  
+      <grade>DP_Free</grade>  
+      <group_id>1</group_id>  
+      <searchengine_push>yes</searchengine_push>  
+      <is_mark>no</is_mark>  
+      <ttl>600</ttl>  
+      <cname_speedup>disable</cname_speedup>  
+      <remark/>  
+      <created_on>2016-05-17 20:15:47</created_on>  
+      <updated_on>2016-05-17 20:15:47</updated_on>  
+      <punycode>yjbeetle.com.cn</punycode>  
+      <ext_status/>  
+      <src_flag>DNSPOD</src_flag>  
+      <name>yjbeetle.com.cn</name>  
+      <grade_title><![CDATA[新免费套餐]]></grade_title>  
+      <is_vip>no</is_vip>  
+      <owner>yjbeetle@gmail.com</owner>  
+      <records>11</records> 
+    </item>  
+    <item> 
+      <id>23456</id>  
+      <status>enable</status>  
+      <grade>DP_Free</grade>  
+      <group_id>1</group_id>  
+      <searchengine_push>yes</searchengine_push>  
+      <is_mark>no</is_mark>  
+      <ttl>600</ttl>  
+      <cname_speedup>disable</cname_speedup>  
+      <remark/>  
+      <created_on>2014-04-28 22:59:23</created_on>  
+      <updated_on>2015-01-06 00:55:22</updated_on>  
+      <punycode>yjbeetle.tk</punycode>  
+      <ext_status>dnserror</ext_status>  
+      <src_flag>DNSPOD</src_flag>  
+      <name>yjbeetle.tk</name>  
+      <grade_title><![CDATA[新免费套餐]]></grade_title>  
+      <is_vip>no</is_vip>  
+      <owner>yjbeetle@gmail.com</owner>  
+      <records>12</records> 
+    </item> 
+  </domains> 
+</dnspod>
