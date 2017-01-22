@@ -1,0 +1,8 @@
+#login_token
+export login_token='id,token'
+
+#domain
+export domain='example.com'
+
+#record
+export record='www'
