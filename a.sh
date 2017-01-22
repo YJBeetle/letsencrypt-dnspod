@@ -155,13 +155,26 @@ create_record()
     fi
 }
 
+init()
+{
+    mkdir -p ./tmp/
+}
+
 clean()
 {
     rm -rf ./tmp/
 }
 
+exiterr() {
+  echo "ERROR: ${1}" >&2
+  clean
+  exit 1
+}
+
+
+
 echo -n '初始化...'
-mkdir -p ./tmp/
+init
 echo '[done]'
 
 echo -n '读取配置文件...'
@@ -172,9 +185,7 @@ echo -n '获取domain_id...'
 return=$(get_domain_id "$login_token" "$domain") || 
 {
     echo '[error]'
-    echo "错误消息：$return" 1>&2
-    clean
-    exit 1
+    exiterr "$return"
 }
 domain_id=$return
 echo "[$domain_id]"
@@ -183,9 +194,7 @@ echo -n '获取record_id...'
 return=$(get_record_id "$login_token" "$record" "$domain_id") || 
 {
     echo '[error]'
-    echo "错误消息：$return" 1>&2
-    clean
-    exit 1
+    exiterr "$return"
 }
 record_id=$return
 if [ "$record_id" = '' ]; then
@@ -195,15 +204,15 @@ if [ "$record_id" = '' ]; then
     return=$(create_record "$login_token" "$record" "$domain_id") || 
     {
         echo '[error]'
-        echo "错误消息：$return" 1>&2
-        clean
-        exit 1
+        exiterr "$return"
     }
     record_id=$return
     echo "[$record_id]"
 else
     echo "[$record_id]"
 fi
+
+
 
 clean
 exit 0
