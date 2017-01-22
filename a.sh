@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-read_dom() {
+read_xml_dom() {
     local IFS=\> #字段分割符改为>
     read -d \< ENTITY CONTENT #read分隔符改为<
     local ret=$?
@@ -34,9 +34,13 @@ read_dom() {
     return $ret
 }
 
-read_xml() {
+get_domain_id()
+{
+    domain=$1
+
     local DOMLVL=0 #初始化节点
-    while read_dom; do
+    cat domain.xml |
+    while read_xml_dom; do
         if [ "$ENTITY" = 'item' ]; then
             itemlevel=$DOMLVL
             id=''
@@ -53,11 +57,44 @@ read_xml() {
             if [ "$ENTITY" = 'name' ]; then
                 name=$CONTENT
             fi
-            if [ "$name" = 'yjbeetle.com.cn' ]; then
+            if [ "$name" = "$domain" ]; then
                 echo $id;
+                return 0;
             fi
         fi
-    done < test.xml
+    done
 }
 
-read_xml
+get_record_id()
+{
+    record=$1
+
+    local DOMLVL=0 #初始化节点
+    cat record.xml |
+    while read_xml_dom; do
+        if [ "$ENTITY" = 'item' ]; then
+            itemlevel=$DOMLVL
+            id=''
+            name=''
+        fi
+        if [[ "$ENTITY" = '/item' ]] && [[ $DOMLVL < $itemlevel ]] ; then
+            id=''
+            name=''
+        fi
+        if [[ "$ENTITY" = 'id' ]] || [[ "$ENTITY" = 'name' ]]; then
+            if [ "$ENTITY" = 'id' ]; then
+                id=$CONTENT
+            fi
+            if [ "$ENTITY" = 'name' ]; then
+                name=$CONTENT
+            fi
+            if [ "$name" = "$record" ]; then
+                echo $id;
+                return 0;
+            fi
+        fi
+    done
+}
+
+echo $(get_domain_id 'yjbeetle.com.cn')
+echo $(get_record_id '_acme-challenge.home')
