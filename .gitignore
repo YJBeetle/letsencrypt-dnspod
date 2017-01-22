@@ -1,2 +1,4 @@
-config.sh
-tmp
+/config.sh
+/tmp
+/certs
+/accounts
