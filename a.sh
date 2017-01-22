@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
 
-echo_tabs() {
-    local tabs="";
-    for((i = 0; i < $1; i++)); do
-        tabs=$tabs'    ' #4个空格
-    done
-    echo -n "$tabs" #一定要加双引号
-}
-
 read_dom() {
     local IFS=\> #字段分割符改为>
     read -d \< ENTITY CONTENT #read分隔符改为<
@@ -45,20 +37,14 @@ read_dom() {
 read_xml() {
     local DOMLVL=0 #初始化节点
     while read_dom; do
-        #echo ------
-        echo_tabs $DOMLVL
-        echo \* DOMLVL=$DOMLVL ENTITY=$ENTITY CONTENT=$CONTENT
-        #echo ======
         if [ "$ENTITY" = 'item' ]; then
             itemlevel=$DOMLVL
             id=''
             name=''
-            echo in
         fi
         if [[ "$ENTITY" = '/item' ]] && [[ $DOMLVL < $itemlevel ]] ; then
             id=''
             name=''
-            echo exit
         fi
         if [[ "$ENTITY" = 'id' ]] || [[ "$ENTITY" = 'name' ]]; then
             if [ "$ENTITY" = 'id' ]; then
