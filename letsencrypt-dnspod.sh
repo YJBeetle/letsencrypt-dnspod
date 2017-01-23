@@ -1169,7 +1169,7 @@ main() {
     PARAM_HOOK="./hook.sh"
     PARAM_CHALLENGETYPE="dns-01"
 
-    PARAM_DOMAIN="${record}.yjbeetle.com.cn"
+    PARAM_DOMAIN="${record}.${domain}"
 
     command_sign_domains
 }
