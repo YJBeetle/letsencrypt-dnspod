@@ -283,6 +283,7 @@ load_config() {
 
   # Default values
   CA="https://acme-v01.api.letsencrypt.org/directory"
+  CA="https://acme-staging.api.letsencrypt.org/directory"
   LICENSE="https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf"
   CERTDIR=
   ACCOUNTDIR=
