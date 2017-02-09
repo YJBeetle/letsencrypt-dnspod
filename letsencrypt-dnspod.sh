@@ -53,17 +53,17 @@ get_domain_id()
         fi
         if [[ "$ENTITY" = 'id' ]] || [[ "$ENTITY" = 'name' ]]; then
             if [ "$ENTITY" = 'id' ]; then
-                id=$CONTENT
+                id="$CONTENT"
             fi
             if [ "$ENTITY" = 'name' ]; then
-                name=$CONTENT
+                name="$CONTENT"
             fi
             if [ "$name" = "$domain" ]; then
-                okid=$id;
+                okid="$id";
             fi
         fi
         if [ "$ENTITY" = 'code' ]; then
-            code=$CONTENT
+            code="$CONTENT"
         fi
         if [ "$ENTITY" = 'message' ]; then
             message="$CONTENT"
@@ -1206,7 +1206,7 @@ if [ "$record_id" = '' ]; then
     echo '[null]'
 
     echo -n '没有找到对应record_id，创建新record并获取id...'
-    return=$(create_record "$login_token" "$record" "$domain_id") || 
+    return=$(create_record "$login_token" "_acme-challenge.$record" "$domain_id") || 
     {
         echo '[error]'
         exiterr "$return"
