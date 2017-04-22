@@ -296,6 +296,9 @@ init()
   if [[ -n "${IP_VERSION}" ]]; then
     [[ "${IP_VERSION}" = "4" || "${IP_VERSION}" = "6" ]] || exiterr "未知的IP版本 ${IP_VERSION}，请修改配置文件，在IP_VERSION输入4或者6。"
   fi
+
+  #KEY_ALGO
+  [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || _exiterr "Unknown public key algorithm ${KEY_ALGO}... can not continue."
 }
 
 # Check for script dependencies
@@ -357,7 +360,6 @@ load_config() {
   HOOK="./hook.sh"
   CHALLENGETYPE="dns-01"
 
-  [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || _exiterr "Unknown public key algorithm ${KEY_ALGO}... can not continue."
 }
 
 # Initialize system
