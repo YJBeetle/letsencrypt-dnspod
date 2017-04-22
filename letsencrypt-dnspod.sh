@@ -101,8 +101,8 @@ get_domain_id()
 get_record_id()
 {
     login_token=$1
-    record=$2
-    domain_id=$3
+    domain_id=$2
+    record=$3
 
     local DOMLVL=0 #初始化节点
     id=''
@@ -150,8 +150,8 @@ get_record_id()
 create_record()
 {
     login_token=$1
-    record=$2
-    domain_id=$3
+    domain_id=$2
+    record=$3
 
     local DOMLVL=0 #初始化节点
 
@@ -170,6 +170,35 @@ create_record()
 
     if [ "$code" = '1' ]; then
         echo "$id";
+        return 0;
+    else
+        echo "$message";
+        return $code;
+    fi
+}
+
+modify_record()
+{
+    login_token=$1
+    record_id=$2
+    domain_id=$3
+    record=$4
+    value=$5
+
+    local DOMLVL=0 #初始化节点
+
+    curl -k https://dnsapi.cn/Record.Modify -d "login_token=${login_token}&domain_id=${domain_id}&record_id=${record_id}&sub_domain=${record}&record_type=TXT&record_line=默认&value=${value}" 2>/dev/null >./tmp/modify_record.xml
+    while read_xml_dom; do
+        if [ "$ENTITY" = 'code' ]; then
+            code=$CONTENT
+        fi
+        if [ "$ENTITY" = 'message' ]; then
+            message="$CONTENT"
+        fi
+    done < ./tmp/modify_record.xml
+
+    if [ "$code" = '1' ]; then
+        echo "ok";
         return 0;
     else
         echo "$message";
@@ -904,7 +933,7 @@ domain_id=$return
 echo "[$domain_id]"
 
 echo -n '获取record_id...'
-return=$(get_record_id "$login_token" "_acme-challenge.$record" "$domain_id") || 
+return=$(get_record_id "$login_token" "$domain_id" "_acme-challenge.$record") || 
 {
     echo '[error]'
     exiterr "$return"
@@ -914,7 +943,7 @@ if [ "$record_id" = '' ]; then
     echo '[null]'
 
     echo -n '没有找到对应record_id，创建新record并获取id...'
-    return=$(create_record "$login_token" "_acme-challenge.$record" "$domain_id") || 
+    return=$(create_record "$login_token" "$domain_id" "_acme-challenge.$record") || 
     {
         echo '[error]'
         exiterr "$return"
