@@ -51,6 +51,48 @@ _sed() {
   fi
 }
 
+# Remove newlines and whitespace from json
+clean_json() {
+  tr -d '\r\n' | _sed -e 's/ +/ /g' -e 's/\{ /{/g' -e 's/ \}/}/g' -e 's/\[ /[/g' -e 's/ \]/]/g'
+}
+
+# Get string value from json dictionary
+get_json_string_value() {
+  local filter
+  filter=$(printf 's/.*"%s": *"\([^"]*\)".*/\\1/p' "$1")
+  sed -n "${filter}"
+}
+
+rm_json_arrays() {
+  local filter
+  filter='s/\[[^][]*\]/null/g'
+  # remove three levels of nested arrays
+  sed -e "${filter}" -e "${filter}" -e "${filter}"
+}
+
+# Convert hex string to binary data
+hex2bin() {
+  # Remove spaces, add leading zero, escape as hex string and parse with printf
+  printf -- "$(cat | _sed -e 's/[[:space:]]//g' -e 's/^(.(.{2})*)$/0\1/' -e 's/(.{2})/\\x\1/g')"
+}
+
+# OpenSSL writes to stderr/stdout even when there are no errors. So just
+# display the output if the exit code was != 0 to simplify debugging.
+_openssl() {
+  set +e
+  out="$(openssl "${@}" 2>&1)"
+  res=$?
+  set -e
+  if [[ ${res} -ne 0 ]]; then
+    echo "  + ERROR: failed to run $* (Exitcode: ${res})" >&2
+    echo >&2
+    echo "Details:" >&2
+    echo "${out}" >&2
+    echo >&2
+    exit ${res}
+  fi
+}
+
 #==============DNSPOD==============
 
 get_domain_id()
@@ -393,49 +435,6 @@ init_system() {
 _exiterr() {
   echo "ERROR: ${1}" >&2
   exit 1
-}
-
-# Remove newlines and whitespace from json
-clean_json() {
-  tr -d '\r\n' | _sed -e 's/ +/ /g' -e 's/\{ /{/g' -e 's/ \}/}/g' -e 's/\[ /[/g' -e 's/ \]/]/g'
-}
-
-
-# Convert hex string to binary data
-hex2bin() {
-  # Remove spaces, add leading zero, escape as hex string and parse with printf
-  printf -- "$(cat | _sed -e 's/[[:space:]]//g' -e 's/^(.(.{2})*)$/0\1/' -e 's/(.{2})/\\x\1/g')"
-}
-
-# Get string value from json dictionary
-get_json_string_value() {
-  local filter
-  filter=$(printf 's/.*"%s": *"\([^"]*\)".*/\\1/p' "$1")
-  sed -n "${filter}"
-}
-
-rm_json_arrays() {
-  local filter
-  filter='s/\[[^][]*\]/null/g'
-  # remove three levels of nested arrays
-  sed -e "${filter}" -e "${filter}" -e "${filter}"
-}
-
-# OpenSSL writes to stderr/stdout even when there are no errors. So just
-# display the output if the exit code was != 0 to simplify debugging.
-_openssl() {
-  set +e
-  out="$(openssl "${@}" 2>&1)"
-  res=$?
-  set -e
-  if [[ ${res} -ne 0 ]]; then
-    echo "  + ERROR: failed to run $* (Exitcode: ${res})" >&2
-    echo >&2
-    echo "Details:" >&2
-    echo "${out}" >&2
-    echo >&2
-    exit ${res}
-  fi
 }
 
 # Send http(s) request with specified method
