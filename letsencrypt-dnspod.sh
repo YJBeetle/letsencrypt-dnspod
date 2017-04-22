@@ -178,10 +178,6 @@ init()
   #创建零食文件夹
   mkdir -p ./tmp/
 
-  #设置变量
-  CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
-  CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
-
   #得到脚本所在目录
   SOURCE="${0}"
   while [ -h "$SOURCE" ]; do #循环解析符号链接
@@ -193,6 +189,11 @@ init()
   BASEDIR="${SCRIPTDIR}"
   BASEDIR="${BASEDIR%%/}" #消除末尾斜杠
   [[ -d "${BASEDIR}" ]] || exiterr "BASEDIR获取错误: ${BASEDIR}" #获取完毕检查
+
+  #设置变量
+  CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
+  CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
+  CAHASH="$(echo "${CA}" | urlbase64)"
 }
 
 clean()
@@ -315,7 +316,6 @@ load_config() {
   OCSP_MUST_STAPLE="no"
   IP_VERSION=
 
-  CAHASH="$(echo "${CA}" | urlbase64)"
   [[ -z "${ACCOUNTDIR}" ]] && ACCOUNTDIR="${BASEDIR}/accounts"
   mkdir -p "${ACCOUNTDIR}/${CAHASH}"
   [[ -f "${ACCOUNTDIR}/${CAHASH}/config" ]] && . "${ACCOUNTDIR}/${CAHASH}/config"
