@@ -190,11 +190,20 @@ init()
   #读取配置文件
   . ${BASEDIR}/config.sh
 
-  #创建零食文件夹
-  mkdir -p ${BASEDIR}/tmp
-
-  #设置变量
+  #CAHASH
   CAHASH="$(echo "${CA}" | urlbase64)"
+
+  #账户文件夹
+  [[ -z "${ACCOUNTDIR}" ]] && ACCOUNTDIR="${BASEDIR}/accounts"
+  mkdir -p "${ACCOUNTDIR}/${CAHASH}"
+  ACCOUNT_KEY="${ACCOUNTDIR}/${CAHASH}/account_key.pem"
+  ACCOUNT_KEY_JSON="${ACCOUNTDIR}/${CAHASH}/registration_info.json"
+
+  #临时文件夹
+  [[ -z "${TMPDIR}" ]] && TMPDIR="${BASEDIR}/tmp"
+  mkdir -p ${TMPDIR}
+  
+
 }
 
 clean()
@@ -297,11 +306,6 @@ verify_config() {
 load_config() {
 
 
-  [[ -z "${ACCOUNTDIR}" ]] && ACCOUNTDIR="${BASEDIR}/accounts"
-  mkdir -p "${ACCOUNTDIR}/${CAHASH}"
-  [[ -f "${ACCOUNTDIR}/${CAHASH}/config" ]] && . "${ACCOUNTDIR}/${CAHASH}/config"
-  ACCOUNT_KEY="${ACCOUNTDIR}/${CAHASH}/account_key.pem"
-  ACCOUNT_KEY_JSON="${ACCOUNTDIR}/${CAHASH}/registration_info.json"
 
   if [[ -f "${BASEDIR}/private_key.pem" ]] && [[ ! -f "${ACCOUNT_KEY}" ]]; then
     echo "! Moving private_key.pem to ${ACCOUNT_KEY}"
