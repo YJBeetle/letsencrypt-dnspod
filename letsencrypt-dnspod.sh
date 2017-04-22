@@ -158,6 +158,21 @@ create_record()
     fi
 }
 
+# Encode data as url-safe formatted base64
+urlbase64() {
+  # urlbase64: base64 encoded string with '+' replaced with '-' and '/' replaced with '_'
+  openssl base64 -e | tr -d '\n\r' | _sed -e 's:=*$::g' -e 'y:+/:-_:'
+}
+
+# Different sed version for different os types...
+_sed() {
+  if [[ "${OSTYPE}" = "Linux" ]]; then
+    sed -r "${@}"
+  else
+    sed -E "${@}"
+  fi
+}
+
 init()
 {
   #创建零食文件夹
@@ -404,14 +419,6 @@ init_system() {
 
 }
 
-# Different sed version for different os types...
-_sed() {
-  if [[ "${OSTYPE}" = "Linux" ]]; then
-    sed -r "${@}"
-  else
-    sed -E "${@}"
-  fi
-}
 
 # Print error message and exit with error
 _exiterr() {
@@ -424,11 +431,6 @@ clean_json() {
   tr -d '\r\n' | _sed -e 's/ +/ /g' -e 's/\{ /{/g' -e 's/ \}/}/g' -e 's/\[ /[/g' -e 's/ \]/]/g'
 }
 
-# Encode data as url-safe formatted base64
-urlbase64() {
-  # urlbase64: base64 encoded string with '+' replaced with '-' and '/' replaced with '_'
-  openssl base64 -e | tr -d '\n\r' | _sed -e 's:=*$::g' -e 'y:+/:-_:'
-}
 
 # Convert hex string to binary data
 hex2bin() {
