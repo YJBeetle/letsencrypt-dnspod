@@ -828,45 +828,6 @@ command_sign_domains() {
       echo "Processing ${domain} with alternative names: ${morenames}"
     fi
 
-    # read cert config
-    # for now this loads the certificate specific config in a subshell and parses a diff of set variables.
-    # we could just source the config file but i decided to go this way to protect people from accidentally overriding
-    # variables used internally by this script itself.
-    if [[ -n "${DOMAINS_D}" ]]; then
-      certconfig="${DOMAINS_D}/${domain}"
-    else
-      certconfig="${CERTDIR}/${domain}/config"
-    fi
-
-    if [ -f "${certconfig}" ]; then
-      echo " + Using certificate specific config file!"
-      ORIGIFS="${IFS}"
-      IFS=$'\n'
-      for cfgline in $(
-        beforevars="$(_mktemp)"
-        aftervars="$(_mktemp)"
-        set > "${beforevars}"
-        # shellcheck disable=SC1090
-        . "${certconfig}"
-        set > "${aftervars}"
-        diff -u "${beforevars}" "${aftervars}" | grep -E '^\+[^+]'
-        rm "${beforevars}"
-        rm "${aftervars}"
-      ); do
-        config_var="$(echo "${cfgline:1}" | cut -d'=' -f1)"
-        config_value="$(echo "${cfgline:1}" | cut -d'=' -f2-)"
-        case "${config_var}" in
-          KEY_ALGO|OCSP_MUST_STAPLE|PRIVATE_KEY_RENEW|PRIVATE_KEY_ROLLOVER|KEYSIZE|CHALLENGETYPE|HOOK|WELLKNOWN|HOOK_CHAIN|OPENSSL_CNF|RENEW_DAYS)
-            echo "   + ${config_var} = ${config_value}"
-            declare -- "${config_var}=${config_value}"
-            ;;
-          _) ;;
-          *) echo "   ! Setting ${config_var} on a per-certificate base is not (yet) supported"
-        esac
-      done
-      IFS="${ORIGIFS}"
-    fi
-    #verify_config
 
     if [[ -e "${cert}" ]]; then
       printf " + Checking domain name(s) of existing cert..."
