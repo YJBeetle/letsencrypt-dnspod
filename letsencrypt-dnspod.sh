@@ -284,7 +284,6 @@ store_configvars() {
   __KEYSIZE="${KEYSIZE}"
   __CHALLENGETYPE="${CHALLENGETYPE}"
   __HOOK="${HOOK}"
-  __WELLKNOWN="${WELLKNOWN}"
   __HOOK_CHAIN="${HOOK_CHAIN}"
   __OPENSSL_CNF="${OPENSSL_CNF}"
   __RENEW_DAYS="${RENEW_DAYS}"
@@ -298,7 +297,6 @@ reset_configvars() {
   KEYSIZE="${__KEYSIZE}"
   CHALLENGETYPE="${__CHALLENGETYPE}"
   HOOK="${__HOOK}"
-  WELLKNOWN="${__WELLKNOWN}"
   HOOK_CHAIN="${__HOOK_CHAIN}"
   OPENSSL_CNF="${__OPENSSL_CNF}"
   RENEW_DAYS="${__RENEW_DAYS}"
@@ -347,7 +345,7 @@ init_system() {
   _exiterr "Problem retrieving ACME/CA-URLs, check if your configured CA points to the directory entrypoint."
 
   # Export some environment variables to be used in hook script
-  export WELLKNOWN BASEDIR CERTDIR CONFIG
+  export BASEDIR CERTDIR CONFIG
 
   # Checking for private key ...
   register_new_key="no"
@@ -610,12 +608,6 @@ sign_csr() {
     keyauth="${challenge_token}.${thumbprint}"
 
     case "${CHALLENGETYPE}" in
-      "http-01")
-        # Store challenge response in well-known location and make world-readable (so that a webserver can access it)
-        printf '%s' "${keyauth}" > "${WELLKNOWN}/${challenge_token}"
-        chmod a+r "${WELLKNOWN}/${challenge_token}"
-        keyauth_hook="${keyauth}"
-        ;;
       "dns-01")
         # Generate DNS entry content for dns-01 validation
         keyauth_hook="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
@@ -662,8 +654,6 @@ sign_csr() {
         reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
       done
 
-      [[ "${CHALLENGETYPE}" = "http-01" ]] && rm -f "${WELLKNOWN}/${challenge_token}"
-
       # Wait for hook script to clean the challenge if used
       if [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && [[ -n "${challenge_token}" ]]; then
         # shellcheck disable=SC2086
@@ -686,13 +676,6 @@ sign_csr() {
   fi
 
   if [[ "${reqstatus}" != "valid" ]]; then
-    # Clean up any remaining challenge_tokens if we stopped early
-    if [[ "${CHALLENGETYPE}" = "http-01" ]] && [[ ${challenge_count} -ne 0 ]]; then
-      while [ ${idx} -lt ${#challenge_tokens[@]} ]; do
-        rm -f "${WELLKNOWN}/${challenge_tokens[${idx}]}"
-        idx=$((idx+1))
-      done
-    fi
 
     _exiterr "Challenge is invalid! (returned: ${reqstatus}) (result: ${result})"
   fi
@@ -990,8 +973,6 @@ fi
 
 export domain_id
 export record_id
-
-
 
 
 PARAM_DOMAIN="${record}.${domain}"
