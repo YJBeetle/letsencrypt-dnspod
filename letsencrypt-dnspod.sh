@@ -160,13 +160,19 @@ create_record()
 
 init()
 {
-    mkdir -p ./tmp/
+  #清理
+  mkdir -p ./tmp/
+
+  #设置变量
+  CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
+  CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
 }
 
 clean()
 {
-:
-#    rm -rf ./tmp/
+  :
+  #清理
+  #rm -rf ./tmp/
 }
 
 exiterr() {
@@ -270,20 +276,8 @@ verify_config() {
 
 # Setup default config values, search for and load configuration files
 load_config() {
-  # Check for config in various locations
-  if [[ -z "${CONFIG:-}" ]]; then
-    for check_config in "/etc/dehydrated" "/usr/local/etc/dehydrated" "${PWD}" "${SCRIPTDIR}"; do
-      if [[ -f "${check_config}/config" ]]; then
-        BASEDIR="${check_config}"
-        CONFIG="${check_config}/config"
-        break
-      fi
-    done
-  fi
 
   # Default values
-  CA="https://acme-v01.api.letsencrypt.org/directory"
-  CA="https://acme-staging.api.letsencrypt.org/directory"
   LICENSE="https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf"
   CERTDIR=
   ACCOUNTDIR=
