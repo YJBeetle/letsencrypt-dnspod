@@ -940,14 +940,7 @@ command_sign_domains() {
   exit 0
 }
 
-main() {
-    PARAM_HOOK="./hook.sh"
-    PARAM_CHALLENGETYPE="dns-01"
 
-    PARAM_DOMAIN="${record}.${domain}"
-
-    command_sign_domains
-}
 
 
 
@@ -988,12 +981,25 @@ else
     echo "[$record_id]"
 fi
 
+
+
+
+
 export domain_id
 export record_id
 
 OSTYPE="$(uname)"
 check_dependencies
-main
+
+PARAM_HOOK="./hook.sh"
+PARAM_CHALLENGETYPE="dns-01"
+
+PARAM_DOMAIN="${record}.${domain}"
+
+command_sign_domains
+
+
+
 
 clean
 exit 0
