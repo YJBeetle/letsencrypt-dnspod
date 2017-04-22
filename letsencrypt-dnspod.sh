@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+#==============基础函数==============
+
 read_xml_dom() {
     local IFS=\> #字段分割符改为>
     read -d \< ENTITY CONTENT #read分隔符改为<
@@ -33,6 +35,23 @@ read_xml_dom() {
 
     return $ret
 }
+
+# Encode data as url-safe formatted base64
+urlbase64() {
+  # urlbase64: base64 encoded string with '+' replaced with '-' and '/' replaced with '_'
+  openssl base64 -e | tr -d '\n\r' | _sed -e 's:=*$::g' -e 'y:+/:-_:'
+}
+
+# Different sed version for different os types...
+_sed() {
+  if [[ "${OSTYPE}" = "Linux" ]]; then
+    sed -r "${@}"
+  else
+    sed -E "${@}"
+  fi
+}
+
+#==============DNSPOD==============
 
 get_domain_id()
 {
@@ -158,20 +177,7 @@ create_record()
     fi
 }
 
-# Encode data as url-safe formatted base64
-urlbase64() {
-  # urlbase64: base64 encoded string with '+' replaced with '-' and '/' replaced with '_'
-  openssl base64 -e | tr -d '\n\r' | _sed -e 's:=*$::g' -e 'y:+/:-_:'
-}
-
-# Different sed version for different os types...
-_sed() {
-  if [[ "${OSTYPE}" = "Linux" ]]; then
-    sed -r "${@}"
-  else
-    sed -E "${@}"
-  fi
-}
+#==============步骤==============
 
 init()
 {
@@ -212,6 +218,28 @@ init()
 
   #锁
   [[ -z "${LOCKFILE}" ]] && LOCKFILE="${BASEDIR}/lock"
+
+  OSTYPE="$(uname)"
+  
+}
+
+# Check for script dependencies
+check_dependencies() {
+  # just execute some dummy and/or version commands to see if required tools exist and are actually usable
+  openssl version > /dev/null 2>&1 || _exiterr "This script requires an openssl binary."
+  _sed "" < /dev/null > /dev/null 2>&1 || _exiterr "This script requires sed with support for extended (modern) regular expressions."
+  command -v grep > /dev/null 2>&1 || _exiterr "This script requires grep."
+  _mktemp -u > /dev/null 2>&1 || _exiterr "This script requires mktemp."
+  diff -u /dev/null /dev/null || _exiterr "This script requires diff."
+
+  # curl returns with an error code in some ancient versions so we have to catch that
+  set +e
+  curl -V > /dev/null 2>&1
+  retcode="$?"
+  set -e
+  if [[ ! "${retcode}" = "0" ]] && [[ ! "${retcode}" = "2" ]]; then
+    _exiterr "This script requires curl."
+  fi
 }
 
 clean()
@@ -248,24 +276,6 @@ _mktemp() {
   mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
 }
 
-# Check for script dependencies
-check_dependencies() {
-  # just execute some dummy and/or version commands to see if required tools exist and are actually usable
-  openssl version > /dev/null 2>&1 || _exiterr "This script requires an openssl binary."
-  _sed "" < /dev/null > /dev/null 2>&1 || _exiterr "This script requires sed with support for extended (modern) regular expressions."
-  command -v grep > /dev/null 2>&1 || _exiterr "This script requires grep."
-  _mktemp -u > /dev/null 2>&1 || _exiterr "This script requires mktemp."
-  diff -u /dev/null /dev/null || _exiterr "This script requires diff."
-
-  # curl returns with an error code in some ancient versions so we have to catch that
-  set +e
-  curl -V > /dev/null 2>&1
-  retcode="$?"
-  set -e
-  if [[ ! "${retcode}" = "0" ]] && [[ ! "${retcode}" = "2" ]]; then
-    _exiterr "This script requires curl."
-  fi
-}
 
 store_configvars() {
   __KEY_ALGO="${KEY_ALGO}"
@@ -938,6 +948,11 @@ echo -n '初始化...'
 init
 echo '[done]'
 
+echo -n '检查依赖...'
+check_dependencies
+echo '[done]'
+
+
 echo -n '获取domain_id...'
 return=$(get_domain_id "$login_token" "$domain") || 
 {
@@ -976,8 +991,6 @@ fi
 export domain_id
 export record_id
 
-OSTYPE="$(uname)"
-check_dependencies
 
 
 
