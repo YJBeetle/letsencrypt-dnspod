@@ -354,17 +354,11 @@ _mktemp() {
   mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
 }
 
-# Setup default config values, search for and load configuration files
-load_config() {
-
-  HOOK="./hook.sh"
-  CHALLENGETYPE="dns-01"
-
-}
-
 # Initialize system
 init_system() {
-  load_config
+  
+  HOOK="./hook.sh"
+  CHALLENGETYPE="dns-01"
 
   # Lockfile handling (prevents concurrent access)
   if [[ -n "${LOCKFILE}" ]]; then
