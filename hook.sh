@@ -19,8 +19,15 @@ deploy_challenge() {
     #   validation, this is what you want to put in the _acme-challenge
     #   TXT record. For HTTP validation it is the value that is expected
     #   be found in the $TOKEN_FILENAME file.
-    
-    curl -k https://dnsapi.cn/Record.Modify -d "login_token=${login_token}&domain_id=$domain_id&record_id=$record_id&sub_domain=_acme-challenge.$record&record_type=TXT&record_line=默认&value=${TOKEN_VALUE}"
+
+    echo -n '修改dnspod值...'
+    return=$(modify_record "$login_token" "$domain_id" "$record_id" "_acme-challenge.$record" "${TOKEN_VALUE}") || 
+    {
+        echo '[error]'
+        exiterr "$return"
+    }
+    echo "[done]"
+
     sleep 15
 }
 

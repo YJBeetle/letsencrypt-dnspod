@@ -180,8 +180,8 @@ create_record()
 modify_record()
 {
     login_token=$1
-    record_id=$2
-    domain_id=$3
+    domain_id=$2
+    record_id=$3
     record=$4
     value=$5
 
@@ -652,7 +652,7 @@ sign_csr() {
   # Wait for hook script to deploy the challenges if used
   if [[ ${challenge_count} -ne 0 ]]; then
     # shellcheck disable=SC2068
-    [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && "${HOOK}" "deploy_challenge" ${deploy_args[@]}
+    [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[@]}
   fi
 
   # Respond to challenges
@@ -665,7 +665,7 @@ sign_csr() {
 
       # Wait for hook script to deploy the challenge if used
       # shellcheck disable=SC2086
-      [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && "${HOOK}" "deploy_challenge" ${deploy_args[${idx}]}
+      [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[${idx}]}
 
       # Ask the acme-server to verify our challenge and wait until it is no longer pending
       echo " + Responding to challenge for ${altname}..."
