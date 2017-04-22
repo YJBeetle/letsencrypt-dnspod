@@ -204,6 +204,14 @@ init()
   ACCOUNT_KEY="${ACCOUNTDIR}/${CAHASH}/account_key.pem"
   ACCOUNT_KEY_JSON="${ACCOUNTDIR}/${CAHASH}/registration_info.json"
 
+  #证书文件夹
+  [[ -z "${CERTDIR}" ]] && CERTDIR="${BASEDIR}/certs"
+
+  #domains.txt
+  [[ -z "${DOMAINS_TXT}" ]] && DOMAINS_TXT="${BASEDIR}/domains.txt"
+
+  #锁
+  [[ -z "${LOCKFILE}" ]] && LOCKFILE="${BASEDIR}/lock"
 }
 
 clean()
@@ -305,23 +313,7 @@ verify_config() {
 # Setup default config values, search for and load configuration files
 load_config() {
 
-
-
-  if [[ -f "${BASEDIR}/private_key.pem" ]] && [[ ! -f "${ACCOUNT_KEY}" ]]; then
-    echo "! Moving private_key.pem to ${ACCOUNT_KEY}"
-    mv "${BASEDIR}/private_key.pem" "${ACCOUNT_KEY}"
-  fi
-  if [[ -f "${BASEDIR}/private_key.json" ]] && [[ ! -f "${ACCOUNT_KEY_JSON}" ]]; then
-    echo "! Moving private_key.json to ${ACCOUNT_KEY_JSON}"
-    mv "${BASEDIR}/private_key.json" "${ACCOUNT_KEY_JSON}"
-  fi
-
-  [[ -z "${CERTDIR}" ]] && CERTDIR="${BASEDIR}/certs"
-  [[ -z "${DOMAINS_TXT}" ]] && DOMAINS_TXT="${BASEDIR}/domains.txt"
   [[ -z "${WELLKNOWN}" ]] && WELLKNOWN="/var/www/dehydrated"
-  [[ -z "${LOCKFILE}" ]] && LOCKFILE="${BASEDIR}/lock"
-  [[ -n "${PARAM_LOCKFILE_SUFFIX:-}" ]] && LOCKFILE="${LOCKFILE}-${PARAM_LOCKFILE_SUFFIX}"
-  [[ -n "${PARAM_NO_LOCK:-}" ]] && LOCKFILE=""
 
   [[ -n "${PARAM_HOOK:-}" ]] && HOOK="${PARAM_HOOK}"
   [[ -n "${PARAM_CERTDIR:-}" ]] && CERTDIR="${PARAM_CERTDIR}"
