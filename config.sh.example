@@ -6,3 +6,26 @@ export domain='example.com'
 
 #record
 export record='www'
+
+# Default values
+CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
+#CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
+LICENSE="https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf"
+CERTDIR=
+ACCOUNTDIR=
+CHALLENGETYPE="http-01"
+DOMAINS_D=
+DOMAINS_TXT=
+HOOK=
+HOOK_CHAIN="no"
+RENEW_DAYS="30"
+KEYSIZE="4096"
+WELLKNOWN=
+PRIVATE_KEY_RENEW="yes"
+PRIVATE_KEY_ROLLOVER="no"
+KEY_ALGO=rsa
+OPENSSL_CNF="$(openssl version -d | cut -d\" -f2)/openssl.cnf"
+CONTACT_EMAIL=
+LOCKFILE=
+OCSP_MUST_STAPLE="no"
+IP_VERSION=

@@ -175,9 +175,6 @@ _sed() {
 
 init()
 {
-  #创建零食文件夹
-  mkdir -p ./tmp/
-
   #得到脚本所在目录
   SOURCE="${0}"
   while [ -h "$SOURCE" ]; do #循环解析符号链接
@@ -190,9 +187,13 @@ init()
   BASEDIR="${BASEDIR%%/}" #消除末尾斜杠
   [[ -d "${BASEDIR}" ]] || exiterr "BASEDIR获取错误: ${BASEDIR}" #获取完毕检查
 
+  #读取配置文件
+  . ${BASEDIR}/config.sh
+
+  #创建零食文件夹
+  mkdir -p ${BASEDIR}/tmp
+
   #设置变量
-  CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
-  CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
   CAHASH="$(echo "${CA}" | urlbase64)"
 }
 
@@ -295,26 +296,6 @@ verify_config() {
 # Setup default config values, search for and load configuration files
 load_config() {
 
-  # Default values
-  LICENSE="https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf"
-  CERTDIR=
-  ACCOUNTDIR=
-  CHALLENGETYPE="http-01"
-  DOMAINS_D=
-  DOMAINS_TXT=
-  HOOK=
-  HOOK_CHAIN="no"
-  RENEW_DAYS="30"
-  KEYSIZE="4096"
-  WELLKNOWN=
-  PRIVATE_KEY_RENEW="yes"
-  PRIVATE_KEY_ROLLOVER="no"
-  KEY_ALGO=rsa
-  OPENSSL_CNF="$(openssl version -d | cut -d\" -f2)/openssl.cnf"
-  CONTACT_EMAIL=
-  LOCKFILE=
-  OCSP_MUST_STAPLE="no"
-  IP_VERSION=
 
   [[ -z "${ACCOUNTDIR}" ]] && ACCOUNTDIR="${BASEDIR}/accounts"
   mkdir -p "${ACCOUNTDIR}/${CAHASH}"
@@ -1140,10 +1121,6 @@ main() {
 
 echo -n '初始化...'
 init
-echo '[done]'
-
-echo -n '读取配置文件...'
-. ./config.sh
 echo '[done]'
 
 echo -n '获取domain_id...'
