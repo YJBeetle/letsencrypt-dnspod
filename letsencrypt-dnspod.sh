@@ -316,10 +316,7 @@ load_config() {
   [[ -z "${WELLKNOWN}" ]] && WELLKNOWN="/var/www/dehydrated"
 
   [[ -n "${PARAM_HOOK:-}" ]] && HOOK="${PARAM_HOOK}"
-  [[ -n "${PARAM_CERTDIR:-}" ]] && CERTDIR="${PARAM_CERTDIR}"
-  [[ -n "${PARAM_CHALLENGETYPE:-}" ]] && CHALLENGETYPE="${PARAM_CHALLENGETYPE}"
-  [[ -n "${PARAM_KEY_ALGO:-}" ]] && KEY_ALGO="${PARAM_KEY_ALGO}"
-  [[ -n "${PARAM_OCSP_MUST_STAPLE:-}" ]] && OCSP_MUST_STAPLE="${PARAM_OCSP_MUST_STAPLE}"
+  CHALLENGETYPE="dns-01"
   [[ -n "${PARAM_IP_VERSION:-}" ]] && IP_VERSION="${PARAM_IP_VERSION}"
 
   verify_config
