@@ -304,33 +304,6 @@ _mktemp() {
   mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
 }
 
-
-store_configvars() {
-  __KEY_ALGO="${KEY_ALGO}"
-  __OCSP_MUST_STAPLE="${OCSP_MUST_STAPLE}"
-  __PRIVATE_KEY_RENEW="${PRIVATE_KEY_RENEW}"
-  __KEYSIZE="${KEYSIZE}"
-  __CHALLENGETYPE="${CHALLENGETYPE}"
-  __HOOK="${HOOK}"
-  __HOOK_CHAIN="${HOOK_CHAIN}"
-  __OPENSSL_CNF="${OPENSSL_CNF}"
-  __RENEW_DAYS="${RENEW_DAYS}"
-  __IP_VERSION="${IP_VERSION}"
-}
-
-reset_configvars() {
-  KEY_ALGO="${__KEY_ALGO}"
-  OCSP_MUST_STAPLE="${__OCSP_MUST_STAPLE}"
-  PRIVATE_KEY_RENEW="${__PRIVATE_KEY_RENEW}"
-  KEYSIZE="${__KEYSIZE}"
-  CHALLENGETYPE="${__CHALLENGETYPE}"
-  HOOK="${__HOOK}"
-  HOOK_CHAIN="${__HOOK_CHAIN}"
-  OPENSSL_CNF="${__OPENSSL_CNF}"
-  RENEW_DAYS="${__RENEW_DAYS}"
-  IP_VERSION="${__IP_VERSION}"
-}
-
 # Setup default config values, search for and load configuration files
 load_config() {
 
@@ -342,9 +315,6 @@ load_config() {
   if [[ -n "${IP_VERSION}" ]]; then
     [[ "${IP_VERSION}" = "4" || "${IP_VERSION}" = "6" ]] || _exiterr "Unknown IP version ${IP_VERSION}... can not continue."
   fi
-
-
-  store_configvars
 }
 
 # Initialize system
@@ -839,7 +809,6 @@ command_sign_domains() {
   ORIGIFS="${IFS}"
   IFS=$'\n'
   for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
-    reset_configvars
     IFS="${ORIGIFS}"
     domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
     morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
