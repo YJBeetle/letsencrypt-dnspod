@@ -300,9 +300,8 @@ load_config() {
 
   [[ -z "${WELLKNOWN}" ]] && WELLKNOWN="/var/www/dehydrated"
 
-  [[ -n "${PARAM_HOOK:-}" ]] && HOOK="${PARAM_HOOK}"
+  HOOK="./hook.sh"
   CHALLENGETYPE="dns-01"
-  [[ -n "${PARAM_IP_VERSION:-}" ]] && IP_VERSION="${PARAM_IP_VERSION}"
 
 
 
@@ -980,11 +979,9 @@ export record_id
 OSTYPE="$(uname)"
 check_dependencies
 
-PARAM_HOOK="./hook.sh"
-PARAM_CHALLENGETYPE="dns-01"
+
 
 PARAM_DOMAIN="${record}.${domain}"
-
 command_sign_domains
 
 
