@@ -21,7 +21,7 @@ deploy_challenge() {
     #   be found in the $TOKEN_FILENAME file.
     
     curl -k https://dnsapi.cn/Record.Modify -d "login_token=${login_token}&domain_id=$domain_id&record_id=$record_id&sub_domain=_acme-challenge.$record&record_type=TXT&record_line=默认&value=${TOKEN_VALUE}"
-    sleep 10
+    sleep 15
 }
 
 clean_challenge() {

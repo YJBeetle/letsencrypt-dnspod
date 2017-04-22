@@ -160,12 +160,24 @@ create_record()
 
 init()
 {
-  #清理
+  #创建零食文件夹
   mkdir -p ./tmp/
 
   #设置变量
   CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
   CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
+
+  #得到脚本所在目录
+  SOURCE="${0}"
+  while [ -h "$SOURCE" ]; do #循环解析符号链接
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" #如果是相对符号链接则应该合并
+  done
+  SCRIPTDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  BASEDIR="${SCRIPTDIR}"
+  BASEDIR="${BASEDIR%%/}" #消除末尾斜杠
+  [[ -d "${BASEDIR}" ]] || exiterr "BASEDIR获取错误: ${BASEDIR}" #获取完毕检查
 }
 
 clean()
@@ -175,7 +187,7 @@ clean()
   #rm -rf ./tmp/
 }
 
-exiterr() {
+exiterr() { #错误并退出
   echo "ERROR: ${1}" >&2
   clean
   exit 1
@@ -195,16 +207,6 @@ set -o pipefail
 [[ -n "${ZSH_VERSION:-}" ]] && set -o SH_WORD_SPLIT && set +o FUNCTION_ARGZERO
 umask 077 # paranoid umask, we're creating private keys
 
-# Find directory in which this script is stored by traversing all symbolic links
-SOURCE="${0}"
-while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
-  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-done
-SCRIPTDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-
-BASEDIR="${SCRIPTDIR}"
 
 # Create (identifiable) temporary files
 _mktemp() {
@@ -297,12 +299,6 @@ load_config() {
   LOCKFILE=
   OCSP_MUST_STAPLE="no"
   IP_VERSION=
-
-  # Remove slash from end of BASEDIR. Mostly for cleaner outputs, doesn't change functionality.
-  BASEDIR="${BASEDIR%%/}"
-
-  # Check BASEDIR and set default variables
-  [[ -d "${BASEDIR}" ]] || _exiterr "BASEDIR does not exist: ${BASEDIR}"
 
   CAHASH="$(echo "${CA}" | urlbase64)"
   [[ -z "${ACCOUNTDIR}" ]] && ACCOUNTDIR="${BASEDIR}/accounts"
