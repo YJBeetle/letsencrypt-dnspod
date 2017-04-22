@@ -295,21 +295,6 @@ reset_configvars() {
   IP_VERSION="${__IP_VERSION}"
 }
 
-# verify configuration values
-verify_config() {
-  [[ "${CHALLENGETYPE}" =~ (http-01|dns-01) ]] || _exiterr "Unknown challenge type ${CHALLENGETYPE}... can not continue."
-  if [[ "${CHALLENGETYPE}" = "dns-01" ]] && [[ -z "${HOOK}" ]]; then
-    _exiterr "Challenge type dns-01 needs a hook script for deployment... can not continue."
-  fi
-  if [[ "${CHALLENGETYPE}" = "http-01" && ! -d "${WELLKNOWN}" ]]; then
-    _exiterr "WELLKNOWN directory doesn't exist, please create ${WELLKNOWN} and set appropriate permissions."
-  fi
-  [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || _exiterr "Unknown public key algorithm ${KEY_ALGO}... can not continue."
-  if [[ -n "${IP_VERSION}" ]]; then
-    [[ "${IP_VERSION}" = "4" || "${IP_VERSION}" = "6" ]] || _exiterr "Unknown IP version ${IP_VERSION}... can not continue."
-  fi
-}
-
 # Setup default config values, search for and load configuration files
 load_config() {
 
@@ -319,7 +304,14 @@ load_config() {
   CHALLENGETYPE="dns-01"
   [[ -n "${PARAM_IP_VERSION:-}" ]] && IP_VERSION="${PARAM_IP_VERSION}"
 
-  verify_config
+
+
+  [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || _exiterr "Unknown public key algorithm ${KEY_ALGO}... can not continue."
+  if [[ -n "${IP_VERSION}" ]]; then
+    [[ "${IP_VERSION}" = "4" || "${IP_VERSION}" = "6" ]] || _exiterr "Unknown IP version ${IP_VERSION}... can not continue."
+  fi
+
+
   store_configvars
 }
 
@@ -882,7 +874,7 @@ command_sign_domains() {
       done
       IFS="${ORIGIFS}"
     fi
-    verify_config
+    #verify_config
 
     if [[ -e "${cert}" ]]; then
       printf " + Checking domain name(s) of existing cert..."
