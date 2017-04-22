@@ -198,7 +198,6 @@ modify_record()
     done < ./tmp/modify_record.xml
 
     if [ "$code" = '1' ]; then
-        echo "ok";
         return 0;
     else
         echo "$message";
