@@ -193,16 +193,16 @@ init()
   #CAHASH
   CAHASH="$(echo "${CA}" | urlbase64)"
 
+  #临时文件夹
+  [[ -z "${TMPDIR}" ]] && TMPDIR="${BASEDIR}/tmp"
+  mkdir -p ${TMPDIR}
+  #mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
+
   #账户文件夹
   [[ -z "${ACCOUNTDIR}" ]] && ACCOUNTDIR="${BASEDIR}/accounts"
   mkdir -p "${ACCOUNTDIR}/${CAHASH}"
   ACCOUNT_KEY="${ACCOUNTDIR}/${CAHASH}/account_key.pem"
   ACCOUNT_KEY_JSON="${ACCOUNTDIR}/${CAHASH}/registration_info.json"
-
-  #临时文件夹
-  [[ -z "${TMPDIR}" ]] && TMPDIR="${BASEDIR}/tmp"
-  mkdir -p ${TMPDIR}
-  
 
 }
 
@@ -210,7 +210,7 @@ clean()
 {
   :
   #清理
-  #rm -rf ./tmp/
+  #rm -rf ${TMPDIR}
 }
 
 exiterr() { #错误并退出
