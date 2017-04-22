@@ -306,11 +306,8 @@ reset_configvars() {
 # Setup default config values, search for and load configuration files
 load_config() {
 
-  [[ -z "${WELLKNOWN}" ]] && WELLKNOWN="/var/www/dehydrated"
-
   HOOK="./hook.sh"
   CHALLENGETYPE="dns-01"
-
 
 
   [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || _exiterr "Unknown public key algorithm ${KEY_ALGO}... can not continue."
