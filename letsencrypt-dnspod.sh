@@ -282,7 +282,6 @@ load_config() {
   CERTDIR=
   ACCOUNTDIR=
   CHALLENGETYPE="http-01"
-  CONFIG_D=
   DOMAINS_D=
   DOMAINS_TXT=
   HOOK=
@@ -298,38 +297,6 @@ load_config() {
   LOCKFILE=
   OCSP_MUST_STAPLE="no"
   IP_VERSION=
-
-  if [[ -z "${CONFIG:-}" ]]; then
-    echo "#" >&2
-    echo "# !! WARNING !! No main config file found, using default config!" >&2
-    echo "#" >&2
-  elif [[ -f "${CONFIG}" ]]; then
-    echo "# INFO: Using main config file ${CONFIG}"
-    BASEDIR="$(dirname "${CONFIG}")"
-    # shellcheck disable=SC1090
-    . "${CONFIG}"
-  else
-    _exiterr "Specified config file doesn't exist."
-  fi
-
-  if [[ -n "${CONFIG_D}" ]]; then
-    if [[ ! -d "${CONFIG_D}" ]]; then
-      _exiterr "The path ${CONFIG_D} specified for CONFIG_D does not point to a directory." >&2
-    fi
-
-    for check_config_d in "${CONFIG_D}"/*.sh; do
-      if [[ ! -e "${check_config_d}" ]]; then
-        echo "# !! WARNING !! Extra configuration directory ${CONFIG_D} exists, but no configuration found in it." >&2
-        break
-      elif [[ -f "${check_config_d}" ]] && [[ -r "${check_config_d}" ]]; then
-        echo "# INFO: Using additional config file ${check_config_d}"
-        # shellcheck disable=SC1090
-        . "${check_config_d}"
-      else
-        _exiterr "Specified additional config ${check_config_d} is not readable or not a file at all." >&2
-      fi
-   done
-  fi
 
   # Remove slash from end of BASEDIR. Mostly for cleaner outputs, doesn't change functionality.
   BASEDIR="${BASEDIR%%/}"
