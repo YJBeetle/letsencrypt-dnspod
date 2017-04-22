@@ -247,8 +247,8 @@ init()
   #锁
   [[ -z "${LOCKFILE}" ]] && LOCKFILE="${BASEDIR}/lock"
 
+  #OSTYPE
   OSTYPE="$(uname)"
-  
 }
 
 # Check for script dependencies
