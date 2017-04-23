@@ -382,10 +382,22 @@ init() {
   exiterr "检索ACME/CA-URLs出现问题, 检查配置文件CA是否指向entrypoint的directory."
 
   #检查帐号私钥
+  register_new_key="no" #用于判定是否是新生成的
   if [[ ! -e "${ACCOUNT_KEY}" ]]; then  #如果帐号私钥不存在则生成一个新的密钥（rsa密钥）
     echo "生成帐号密钥..."
     _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
+    register_new_key="yes"
+  fi
+  openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
 
+  #从私钥获取公钥件并计算指纹
+  pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
+  pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
+
+  thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
+
+  #如果刚刚密钥是新生成的，则必须在acme服务器注册
+  if [[ "${register_new_key}" = "yes" ]]; then
     echo "在ACME服务器注册帐号密钥..."
     [[ ! -z "${CA_NEW_REG}" ]] || exiterr "证书颁发机构不允许注册"
     
@@ -400,13 +412,6 @@ init() {
       exiterr "注册帐号密钥错误"
     )
   fi
-  openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
-
-  #从私钥获取公钥件并计算指纹
-  pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
-  pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
-
-  thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
 
 }
 
