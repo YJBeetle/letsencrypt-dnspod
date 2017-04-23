@@ -813,8 +813,8 @@ ORIGIFS="${IFS}"
 IFS=$'\n'
 for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
   IFS="${ORIGIFS}"
-  domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
-  morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
+  domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
+  morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
   cert="${CERTDIR}/${domain}/cert.pem"
 
   force_renew="${PARAM_FORCE:-no}"
