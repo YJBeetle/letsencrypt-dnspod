@@ -814,32 +814,23 @@ IFS=$'\n'
 for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
   IFS="${ORIGIFS}"
   domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
-  morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
+  record="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
+  morenames=$record
   cert="${CERTDIR}/${domain}/cert.pem"
 
-  force_renew="${PARAM_FORCE:-no}"
-
-  if [[ -z "${morenames}" ]];then
-    echo "Processing ${domain}"
-  else
-    echo "Processing ${domain} with alternative names: ${morenames}"
-  fi
-
-
+  echo "处理[${domain} ${record}]"
+  force_renew="no"
   if [[ -e "${cert}" ]]; then
-    printf " + Checking domain name(s) of existing cert..."
+    echo -n "域名已经存在，检查变更..."
 
     certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
     givennames="$(echo "${domain}" "${morenames}"| tr ' ' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
 
     if [[ "${certnames}" = "${givennames}" ]]; then
-      echo " unchanged."
+      echo "[unchanged]"
     else
-      echo " changed!"
-      echo " + Domain name(s) are not matching!"
-      echo " + Names in old certificate: ${certnames}"
-      echo " + Configured names: ${givennames}"
-      echo " + Forcing renew."
+      echo "[changed]"
+      echo "域名信息不符合，旧为：${certnames}，新为：${givennames}，强制更新"
       force_renew="yes"
     fi
   fi
