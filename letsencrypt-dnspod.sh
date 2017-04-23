@@ -288,17 +288,26 @@ init()
 
   #锁
   [[ -z "${LOCKFILE}" ]] && LOCKFILE="${BASEDIR}/lock"
+  #检查和设定锁
+  if [[ -n "${LOCKFILE}" ]]; then
+    LOCKDIR="$(dirname "${LOCKFILE}")"
+    [[ -w "${LOCKDIR}" ]] || exiterr "锁${LOCKFILE}的目录${LOCKDIR}不可写"
+    ( set -C; date > "${LOCKFILE}" ) 2>/dev/null || exiterr "锁文件'${LOCKFILE}'存在"
+    remove_lock() { rm -f "${LOCKFILE}"; }
+    trap 'remove_lock' EXIT
+  fi
 
-  #OSTYPE
+  #OSTYPE获取
   OSTYPE="$(uname)"
 
-  #IPversion
+  #IPversion检查
   if [[ -n "${IP_VERSION}" ]]; then
     [[ "${IP_VERSION}" = "4" || "${IP_VERSION}" = "6" ]] || exiterr "未知的IP版本 ${IP_VERSION}，请修改配置文件，在IP_VERSION输入4或者6。"
   fi
 
-  #KEY_ALGO
+  #KEY_ALGO检查
   [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || _exiterr "Unknown public key algorithm ${KEY_ALGO}... can not continue."
+
 }
 
 # Check for script dependencies
@@ -360,14 +369,6 @@ init_system() {
   HOOK="./hook.sh"
   CHALLENGETYPE="dns-01"
 
-  # Lockfile handling (prevents concurrent access)
-  if [[ -n "${LOCKFILE}" ]]; then
-    LOCKDIR="$(dirname "${LOCKFILE}")"
-    [[ -w "${LOCKDIR}" ]] || _exiterr "Directory ${LOCKDIR} for LOCKFILE ${LOCKFILE} is not writable, aborting."
-    ( set -C; date > "${LOCKFILE}" ) 2>/dev/null || _exiterr "Lock file '${LOCKFILE}' present, aborting."
-    remove_lock() { rm -f "${LOCKFILE}"; }
-    trap 'remove_lock' EXIT
-  fi
 
   # Get CA URLs
   CA_DIRECTORY="$(http_request get "${CA}")"

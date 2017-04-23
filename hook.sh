@@ -20,7 +20,7 @@ deploy_challenge() {
     #   TXT record. For HTTP validation it is the value that is expected
     #   be found in the $TOKEN_FILENAME file.
 
-    echo -n '修改dnspod值...'
+    echo -n '修改record value...'
     return=$(modify_record "$login_token" "$domain_id" "$record_id" "_acme-challenge.$record" "${TOKEN_VALUE}") || 
     {
         echo '[error]'
