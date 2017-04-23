@@ -738,37 +738,6 @@ echo -n '初始化...'
 init
 echo '[done]'
 
-echo -n '获取domain_id...'
-return=$(get_domain_id "$login_token" "$domain") || 
-{
-    echo '[error]'
-    exiterr "$return"
-}
-domain_id=$return
-echo "[$domain_id]"
-
-echo -n '获取record_id...'
-return=$(get_record_id "$login_token" "$domain_id" "_acme-challenge.$record") || 
-{
-    echo '[error]'
-    exiterr "$return"
-}
-record_id=$return
-if [ "$record_id" = '' ]; then
-    echo '[null]'
-
-    echo -n '没有找到对应record_id，创建新record并获取id...'
-    return=$(create_record "$login_token" "$domain_id" "_acme-challenge.$record") || 
-    {
-        echo '[error]'
-        exiterr "$return"
-    }
-    record_id=$return
-    echo "[$record_id]"
-else
-    echo "[$record_id]"
-fi
-
 #检查帐号私钥
 echo -n '检查帐号私钥...'
 register_new_key="no" #用于判定是否是新生成的
@@ -806,7 +775,37 @@ if [[ "${register_new_key}" = "yes" ]]; then
     echo '[done]'
 fi
 
+#dnspod请求
+echo -n '获取domain_id...'
+return=$(get_domain_id "$login_token" "$domain") || 
+{
+    echo '[error]'
+    exiterr "$return"
+}
+domain_id=$return
+echo "[$domain_id]"
 
+echo -n '获取record_id...'
+return=$(get_record_id "$login_token" "$domain_id" "_acme-challenge.$record") || 
+{
+    echo '[error]'
+    exiterr "$return"
+}
+record_id=$return
+if [ "$record_id" = '' ]; then
+    echo '[null]'
+
+    echo -n '没有找到对应record_id，创建新record并获取id...'
+    return=$(create_record "$login_token" "$domain_id" "_acme-challenge.$record") || 
+    {
+        echo '[error]'
+        exiterr "$return"
+    }
+    record_id=$return
+    echo "[$record_id]"
+else
+    echo "[$record_id]"
+fi
 
 
 
