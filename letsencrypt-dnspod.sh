@@ -616,7 +616,8 @@ sign_csr() {
 # Create certificate for domain(s)
 sign_domain() {
   domain="${1}"
-  altnames="${*}"
+  record="$(echo ${*} | cut -s -d' ' -f2-)"
+  altnames="$(echo "${record}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | tr '\n' ' ')"
   timestamp="$(date +%s)"
 
   echo " + Signing domains..."
@@ -825,7 +826,7 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
     echo -n "检查变更..."
 
     certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
-    givennames="$(echo "${domain}" "${morenames}"| tr ' ' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
+    givennames="$(echo "${record}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
 
     if [[ "${certnames}" = "${givennames}" ]]; then
       echo "[unchanged]"

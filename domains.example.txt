@@ -1,2 +1,2 @@
-#domain
-www.example.com
+#domain         #record(s)
+example.com     @ www
