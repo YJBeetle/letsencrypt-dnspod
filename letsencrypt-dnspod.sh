@@ -287,7 +287,7 @@ modify_record()
 
 #==============步骤==============
 
-init()
+loadcfg()
 {
   #得到脚本所在目录
   SOURCE="${0}"
@@ -367,49 +367,11 @@ check_dependencies() {
   fi
 }
 
-clean()
-{
-  :
-  #清理
-  #rm -rf ${TMPDIR}
-  # remove temporary domains.txt file if used
-  [[ -n "${PARAM_DOMAIN:-}" ]] && rm -f "${DOMAINS_TXT}"
-  # remove temporary domains.txt file if used
-  #[[ -n "${PARAM_DOMAIN:-}" && -n "${DOMAINS_TXT:-}" ]] && rm "${DOMAINS_TXT}"
-}
-
-exiterr() { #错误并退出
-  echo "ERROR: ${1}" >&2
-  clean
-  exit 1
-}
-
-
-#!/usr/bin/env bash
-
-# dehydrated by lukas2511
-# Source: https://github.com/lukas2511/dehydrated
-#
-# This script is licensed under The MIT License (see LICENSE for more information).
-
-set -e
-set -u
-set -o pipefail
-[[ -n "${ZSH_VERSION:-}" ]] && set -o SH_WORD_SPLIT && set +o FUNCTION_ARGZERO
-umask 077 # paranoid umask, we're creating private keys
-
-
-# Create (identifiable) temporary files
-_mktemp() {
-  # shellcheck disable=SC2068
-  mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
-}
-
-# Initialize system
-init_system() {
+init() {
   
   HOOK="./hook.sh"
   CHALLENGETYPE="dns-01"
+  PARAM_DOMAIN="${record}.${domain}"
 
   # Get CA URLs
   CA_DIRECTORY="$(http_request get "${CA}")"
@@ -467,6 +429,43 @@ init_system() {
 
 }
 
+clean()
+{
+  :
+  #清理
+  #rm -rf ${TMPDIR}
+  # remove temporary domains.txt file if used
+  [[ -n "${PARAM_DOMAIN:-}" ]] && rm -f "${DOMAINS_TXT}"
+  # remove temporary domains.txt file if used
+  #[[ -n "${PARAM_DOMAIN:-}" && -n "${DOMAINS_TXT:-}" ]] && rm "${DOMAINS_TXT}"
+}
+
+exiterr() { #错误并退出
+  echo "ERROR: ${1}" >&2
+  clean
+  exit 1
+}
+
+
+#!/usr/bin/env bash
+
+# dehydrated by lukas2511
+# Source: https://github.com/lukas2511/dehydrated
+#
+# This script is licensed under The MIT License (see LICENSE for more information).
+
+set -e
+set -u
+set -o pipefail
+[[ -n "${ZSH_VERSION:-}" ]] && set -o SH_WORD_SPLIT && set +o FUNCTION_ARGZERO
+umask 077 # paranoid umask, we're creating private keys
+
+
+# Create (identifiable) temporary files
+_mktemp() {
+  # shellcheck disable=SC2068
+  mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
+}
 
 # Print error message and exit with error
 _exiterr() {
@@ -858,14 +857,17 @@ command_sign_domains() {
 
 
 
-echo -n '初始化...'
-init
+echo -n '读取配置...'
+loadcfg
 echo '[done]'
 
 echo -n '检查依赖...'
 check_dependencies
 echo '[done]'
 
+echo -n '初始化...'
+init
+echo '[done]'
 
 echo -n '获取domain_id...'
 return=$(get_domain_id "$login_token" "$domain") || 
@@ -903,8 +905,6 @@ fi
 
 
 
-PARAM_DOMAIN="${record}.${domain}"
-init_system
 command_sign_domains
 
 
