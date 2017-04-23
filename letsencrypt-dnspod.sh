@@ -808,13 +808,13 @@ PARAM_DOMAIN="${record}.${domain}"
 
 DOMAINS_TXT="${BASEDIR}/domains.txt"
 
-# Generate certificates for all domains found in domains.txt. Check if existing certificate are about to expire
+#开始生成证书
 ORIGIFS="${IFS}"
 IFS=$'\n'
 for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
   IFS="${ORIGIFS}"
-  domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
-  morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
+  domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
+  morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
   cert="${CERTDIR}/${domain}/cert.pem"
 
   force_renew="${PARAM_FORCE:-no}"

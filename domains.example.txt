@@ -1,2 +1,2 @@
-#domain
-www.example.com
+#login_token                           #domain
+12345,ffffeeeeddddccccbbbbaaaa99998888 www.example.com
