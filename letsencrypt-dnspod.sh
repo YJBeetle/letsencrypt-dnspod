@@ -93,6 +93,44 @@ _openssl() {
   fi
 }
 
+# Send http(s) request with specified method
+http_request() {
+  tempcont="$(_mktemp)"
+
+  if [[ -n "${IP_VERSION:-}" ]]; then
+      ip_version="-${IP_VERSION}"
+  fi
+
+  set +e
+  if [[ "${1}" = "head" ]]; then
+    statuscode="$(curl ${ip_version:-} -s -w "%{http_code}" -o "${tempcont}" "${2}" -I)"
+    curlret="${?}"
+  elif [[ "${1}" = "get" ]]; then
+    statuscode="$(curl ${ip_version:-} -s -w "%{http_code}" -o "${tempcont}" "${2}")"
+    curlret="${?}"
+  elif [[ "${1}" = "post" ]]; then
+    statuscode="$(curl ${ip_version:-} -s -w "%{http_code}" -o "${tempcont}" "${2}" -d "${3}")"
+    curlret="${?}"
+  else
+    set -e
+    exiterr "未知请求方式: ${1}"
+  fi
+  set -e
+
+  if [[ ! "${curlret}" = "0" ]]; then
+    exiterr "连接服务器出错(方式：${1}，地址：${2}，返回${curlret})"
+  fi
+
+  if [[ ! "${statuscode:0:1}" = "2" ]]; then
+    tempcontstr=$(cat "${tempcont}")
+    rm -f "${tempcont}"
+    exiterr "请求服务器出错(方式：${1}，地址：${2}，状态码：${statuscode})\n详情:\n${tempcontstr}"
+  fi
+
+  cat "${tempcont}"
+  rm -f "${tempcont}"
+}
+
 #==============DNSPOD==============
 
 get_domain_id()
@@ -435,44 +473,6 @@ init_system() {
 _exiterr() {
   echo "ERROR: ${1}" >&2
   exit 1
-}
-
-# Send http(s) request with specified method
-http_request() {
-  tempcont="$(_mktemp)"
-
-  if [[ -n "${IP_VERSION:-}" ]]; then
-      ip_version="-${IP_VERSION}"
-  fi
-
-  set +e
-  if [[ "${1}" = "head" ]]; then
-    statuscode="$(curl ${ip_version:-} -s -w "%{http_code}" -o "${tempcont}" "${2}" -I)"
-    curlret="${?}"
-  elif [[ "${1}" = "get" ]]; then
-    statuscode="$(curl ${ip_version:-} -s -w "%{http_code}" -o "${tempcont}" "${2}")"
-    curlret="${?}"
-  elif [[ "${1}" = "post" ]]; then
-    statuscode="$(curl ${ip_version:-} -s -w "%{http_code}" -o "${tempcont}" "${2}" -d "${3}")"
-    curlret="${?}"
-  else
-    set -e
-    exiterr "未知请求方式: ${1}"
-  fi
-  set -e
-
-  if [[ ! "${curlret}" = "0" ]]; then
-    exiterr "连接服务器出错(方式：${1}，地址：${2}，返回${curlret})"
-  fi
-
-  if [[ ! "${statuscode:0:1}" = "2" ]]; then
-    tempcontstr=$(cat "${tempcont}")
-    rm -f "${tempcont}"
-    exiterr "请求服务器出错(方式：${1}，地址：${2}，状态码：${statuscode})\n详情:\n${tempcontstr}"
-  fi
-
-  cat "${tempcont}"
-  rm -f "${tempcont}"
 }
 
 # Send signed request
