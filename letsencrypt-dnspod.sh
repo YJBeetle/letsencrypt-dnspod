@@ -848,8 +848,7 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
   fi
 
   if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
-  :
-    # sign_domain ${line}
+    sign_domain ${line}
   else
     echo "无须更新"
   fi
