@@ -429,7 +429,7 @@ exiterr() { #错误并退出
   exit 1
 }
 
-
+#====================================dehydrated
 #!/usr/bin/env bash
 
 # dehydrated by lukas2511
@@ -719,91 +719,7 @@ sign_domain() {
   unset challenge_token
   echo " + Done!"
 }
-
-# Usage: --cron (-c)
-# Description: Sign/renew non-existant/changed/expiring certificates.
-command_sign_domains() {
-
-  if [[ -n "${PARAM_DOMAIN:-}" ]]; then
-    DOMAINS_TXT="$(_mktemp)"
-    printf -- "${PARAM_DOMAIN}" > "${DOMAINS_TXT}"
-  elif [[ -e "${DOMAINS_TXT}" ]]; then
-    if [[ ! -r "${DOMAINS_TXT}" ]]; then
-      _exiterr "domains.txt found but not readable"
-    fi
-  else
-    _exiterr "domains.txt not found and --domain not given"
-  fi
-
-  # Generate certificates for all domains found in domains.txt. Check if existing certificate are about to expire
-  ORIGIFS="${IFS}"
-  IFS=$'\n'
-  for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
-    IFS="${ORIGIFS}"
-    domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
-    morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
-    cert="${CERTDIR}/${domain}/cert.pem"
-
-    force_renew="${PARAM_FORCE:-no}"
-
-    if [[ -z "${morenames}" ]];then
-      echo "Processing ${domain}"
-    else
-      echo "Processing ${domain} with alternative names: ${morenames}"
-    fi
-
-
-    if [[ -e "${cert}" ]]; then
-      printf " + Checking domain name(s) of existing cert..."
-
-      certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
-      givennames="$(echo "${domain}" "${morenames}"| tr ' ' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
-
-      if [[ "${certnames}" = "${givennames}" ]]; then
-        echo " unchanged."
-      else
-        echo " changed!"
-        echo " + Domain name(s) are not matching!"
-        echo " + Names in old certificate: ${certnames}"
-        echo " + Configured names: ${givennames}"
-        echo " + Forcing renew."
-        force_renew="yes"
-      fi
-    fi
-
-    if [[ -e "${cert}" ]]; then
-      echo " + Checking expire date of existing cert..."
-      valid="$(openssl x509 -enddate -noout -in "${cert}" | cut -d= -f2- )"
-
-      printf " + Valid till %s " "${valid}"
-      if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
-        printf "(Longer than %d days). " "${RENEW_DAYS}"
-        if [[ "${force_renew}" = "yes" ]]; then
-          echo "Ignoring because renew was forced!"
-        else
-          # Certificate-Names unchanged and cert is still valid
-          echo "Skipping renew!"
-          [[ -n "${HOOK}" ]] && "${HOOK}" "unchanged_cert" "${domain}" "${CERTDIR}/${domain}/privkey.pem" "${CERTDIR}/${domain}/cert.pem" "${CERTDIR}/${domain}/fullchain.pem" "${CERTDIR}/${domain}/chain.pem"
-          continue
-        fi
-      else
-        echo "(Less than ${RENEW_DAYS} days). Renewing!"
-      fi
-    fi
-
-    # shellcheck disable=SC2086
-    if [[ "${PARAM_KEEP_GOING:-}" = "yes" ]]; then
-      sign_domain ${line} &
-      wait $! || true
-    else
-      sign_domain ${line}
-    fi
-  done
-
-
-  exit 0
-}
-
+#====================================dehydrated
 
 
 
@@ -893,7 +809,90 @@ fi
 
 
 
-command_sign_domains
+
+
+
+if [[ -n "${PARAM_DOMAIN:-}" ]]; then
+  DOMAINS_TXT="$(_mktemp)"
+  printf -- "${PARAM_DOMAIN}" > "${DOMAINS_TXT}"
+elif [[ -e "${DOMAINS_TXT}" ]]; then
+  if [[ ! -r "${DOMAINS_TXT}" ]]; then
+    _exiterr "domains.txt found but not readable"
+  fi
+else
+  _exiterr "domains.txt not found and --domain not given"
+fi
+
+# Generate certificates for all domains found in domains.txt. Check if existing certificate are about to expire
+ORIGIFS="${IFS}"
+IFS=$'\n'
+for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
+  IFS="${ORIGIFS}"
+  domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
+  morenames="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
+  cert="${CERTDIR}/${domain}/cert.pem"
+
+  force_renew="${PARAM_FORCE:-no}"
+
+  if [[ -z "${morenames}" ]];then
+    echo "Processing ${domain}"
+  else
+    echo "Processing ${domain} with alternative names: ${morenames}"
+  fi
+
+
+  if [[ -e "${cert}" ]]; then
+    printf " + Checking domain name(s) of existing cert..."
+
+    certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
+    givennames="$(echo "${domain}" "${morenames}"| tr ' ' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
+
+    if [[ "${certnames}" = "${givennames}" ]]; then
+      echo " unchanged."
+    else
+      echo " changed!"
+      echo " + Domain name(s) are not matching!"
+      echo " + Names in old certificate: ${certnames}"
+      echo " + Configured names: ${givennames}"
+      echo " + Forcing renew."
+      force_renew="yes"
+    fi
+  fi
+
+  if [[ -e "${cert}" ]]; then
+    echo " + Checking expire date of existing cert..."
+    valid="$(openssl x509 -enddate -noout -in "${cert}" | cut -d= -f2- )"
+
+    printf " + Valid till %s " "${valid}"
+    if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
+      printf "(Longer than %d days). " "${RENEW_DAYS}"
+      if [[ "${force_renew}" = "yes" ]]; then
+        echo "Ignoring because renew was forced!"
+      else
+        # Certificate-Names unchanged and cert is still valid
+        echo "Skipping renew!"
+        [[ -n "${HOOK}" ]] && "${HOOK}" "unchanged_cert" "${domain}" "${CERTDIR}/${domain}/privkey.pem" "${CERTDIR}/${domain}/cert.pem" "${CERTDIR}/${domain}/fullchain.pem" "${CERTDIR}/${domain}/chain.pem"
+        continue
+      fi
+    else
+      echo "(Less than ${RENEW_DAYS} days). Renewing!"
+    fi
+  fi
+
+  # shellcheck disable=SC2086
+  if [[ "${PARAM_KEEP_GOING:-}" = "yes" ]]; then
+    sign_domain ${line} &
+    wait $! || true
+  else
+    sign_domain ${line}
+  fi
+done
+
+
+exit 0
+
+
+
 
 
 
