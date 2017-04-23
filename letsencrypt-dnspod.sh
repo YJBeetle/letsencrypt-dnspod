@@ -36,6 +36,12 @@ read_xml_dom() {
     return $ret
 }
 
+# Create (identifiable) temporary files
+_mktemp() {
+  # shellcheck disable=SC2068
+  mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
+}
+
 # Encode data as url-safe formatted base64
 urlbase64() {
   # urlbase64: base64 encoded string with '+' replaced with '-' and '/' replaced with '_'
@@ -437,12 +443,6 @@ set -o pipefail
 [[ -n "${ZSH_VERSION:-}" ]] && set -o SH_WORD_SPLIT && set +o FUNCTION_ARGZERO
 umask 077 # paranoid umask, we're creating private keys
 
-
-# Create (identifiable) temporary files
-_mktemp() {
-  # shellcheck disable=SC2068
-  mktemp ${@:-} "${TMPDIR:-/tmp}/dehydrated-XXXXXX"
-}
 
 # Print error message and exit with error
 _exiterr() {
