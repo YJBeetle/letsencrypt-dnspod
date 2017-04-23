@@ -382,7 +382,7 @@ init() {
   exiterr "检索ACME/CA-URLs出现问题, 检查配置文件CA是否指向entrypoint的directory."
 
   #检查帐号私钥
-  register_new_key="no"
+  register_new_key="no" #用于判定是否是新生成的
   if [[ ! -e "${ACCOUNT_KEY}" ]]; then  #如果帐号私钥不存在则生成一个新的密钥（rsa密钥）
     echo "生成帐号密钥..."
     _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
@@ -390,30 +390,27 @@ init() {
   fi
   openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
 
-  # Get public components from private key and calculate thumbprint
+  #从私钥获取公钥件并计算指纹
   pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
   pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
 
   thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
 
-  # If we generated a new private key in the step above we have to register it with the acme-server
+  #如果刚刚密钥是新生成的，则必须在acme服务器注册
   if [[ "${register_new_key}" = "yes" ]]; then
-    echo "+ Registering account key with ACME server..."
-    [[ ! -z "${CA_NEW_REG}" ]] || _exiterr "Certificate authority doesn't allow registrations."
-    # If an email for the contact has been provided then adding it to the registration request
-    FAILED=false
-    if [[ -n "${CONTACT_EMAIL}" ]]; then
-      (signed_request "${CA_NEW_REG}" '{"resource": "new-reg", "contact":["mailto:'"${CONTACT_EMAIL}"'"], "agreement": "'"$LICENSE"'"}' > "${ACCOUNT_KEY_JSON}") || FAILED=true
+    echo "在ACME服务器注册帐号密钥..."
+    [[ ! -z "${CA_NEW_REG}" ]] || exiterr "证书颁发机构不允许注册"
+    
+    if [[ -n "${CONTACT_EMAIL}" ]]; then  #如果提供了联系人的电子邮件，添加到注册请求
+      request_str='{"resource": "new-reg", "contact":["mailto:'"${CONTACT_EMAIL}"'"], "agreement": "'"$LICENSE"'"}'
     else
-      (signed_request "${CA_NEW_REG}" '{"resource": "new-reg", "agreement": "'"$LICENSE"'"}' > "${ACCOUNT_KEY_JSON}") || FAILED=true
+      request_str='{"resource": "new-reg", "agreement": "'"$LICENSE"'"}'
     fi
-    if [[ "${FAILED}" = "true" ]]; then
-      echo
-      echo
-      echo "Error registering account key. See message above for more information."
+    (signed_request "${CA_NEW_REG}" "${request_str}" > "${ACCOUNT_KEY_JSON}") || 
+    (
       rm "${ACCOUNT_KEY}" "${ACCOUNT_KEY_JSON}"
-      exit 1
-    fi
+      exiterr "注册帐号密钥错误"
+    )
   fi
 
 }
