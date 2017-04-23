@@ -717,152 +717,147 @@ sign_domain() {
 
 
 
-
-echo -n '读取配置...'
-loadcfg
-echo '[done]'
-
-echo -n '检查依赖...'
-check_dependencies
-echo '[done]'
-
-echo -n '初始化...'
-init
-echo '[done]'
-
-#检查帐号私钥
-echo -n '检查帐号私钥...'
-register_new_key="no" #用于判定是否是新生成的
-if [[ ! -e "${ACCOUNT_KEY}" ]]; then  #如果帐号私钥不存在则生成一个新的密钥（rsa密钥）
-    echo '[null]'
-
-    echo -n "生成新帐号密钥..."
-    _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
-    register_new_key="yes"
-fi
-openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
-
-#从私钥获取公钥件并计算指纹
-pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
-pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
-thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
-
-echo '[done]'
-
-#如果刚刚密钥是新生成的，则必须在acme服务器注册
-if [[ "${register_new_key}" = "yes" ]]; then
-    echo -n "在ACME服务器注册新帐号密钥..."
-    [[ ! -z "${CA_NEW_REG}" ]] || exiterr "证书颁发机构不允许注册"
-    
-    if [[ -n "${CONTACT_EMAIL}" ]]; then  #如果提供了联系人的电子邮件，添加到注册请求
-      request_str='{"resource": "new-reg", "contact":["mailto:'"${CONTACT_EMAIL}"'"], "agreement": "'"$LICENSE"'"}'
-    else
-      request_str='{"resource": "new-reg", "agreement": "'"$LICENSE"'"}'
-    fi
-    (signed_request "${CA_NEW_REG}" "${request_str}" > "${ACCOUNT_KEY_JSON}") || 
-    (
-      rm "${ACCOUNT_KEY}" "${ACCOUNT_KEY_JSON}"
-      exiterr "注册帐号密钥错误"
-    )
-    echo '[done]'
-fi
-
-#dnspod请求
-echo -n '获取domain_id...'
-return=$(get_domain_id "$login_token" "$domain") || 
+main()
 {
-    echo '[error]'
-    exiterr "$return"
-}
-domain_id=$return
-echo "[$domain_id]"
+  echo -n '读取配置...'
+  loadcfg
+  echo '[done]'
 
-echo -n '获取record_id...'
-return=$(get_record_id "$login_token" "$domain_id" "_acme-challenge.$record") || 
-{
-    echo '[error]'
-    exiterr "$return"
-}
-record_id=$return
-if [ "$record_id" = '' ]; then
-    echo '[null]'
+  echo -n '检查依赖...'
+  check_dependencies
+  echo '[done]'
 
-    echo -n '没有找到对应record_id，创建新record并获取id...'
-    return=$(create_record "$login_token" "$domain_id" "_acme-challenge.$record") || 
-    {
-        echo '[error]'
-        exiterr "$return"
-    }
-    record_id=$return
-    echo "[$record_id]"
-else
-    echo "[$record_id]"
-fi
+  echo -n '初始化...'
+  init
+  echo '[done]'
 
+  #检查帐号私钥
+  echo -n '检查帐号私钥...'
+  register_new_key="no" #用于判定是否是新生成的
+  if [[ ! -e "${ACCOUNT_KEY}" ]]; then  #如果帐号私钥不存在则生成一个新的密钥（rsa密钥）
+      echo '[null]'
 
+      echo -n "生成新帐号密钥..."
+      _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
+      register_new_key="yes"
+  fi
+  openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
 
-  
+  #从私钥获取公钥件并计算指纹
+  pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
+  pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
+  thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
 
-HOOK="./hook.sh"
-CHALLENGETYPE="dns-01"
-PARAM_DOMAIN="${record}.${domain}"
+  echo '[done]'
 
-DOMAINS_TXT="${BASEDIR}/domains.txt"
-
-#开始生成证书
-ORIGIFS="${IFS}"
-IFS=$'\n'
-for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
-  IFS="${ORIGIFS}"
-  domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
-  record="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
-  morenames=$record
-  cert="${CERTDIR}/${domain}/cert.pem"
-
-  echo "处理[${domain} ${record}]"
-
-  force_renew="no"
-  if [[ -e "${cert}" ]]; then
-    echo -n "检查变更..."
-
-    certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
-    givennames="$(echo "${record}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
-
-    if [[ "${certnames}" = "${givennames}" ]]; then
-      echo "[unchanged]"
-    else
-      force_renew="yes"
-      echo "[changed]"
-    fi
+  #如果刚刚密钥是新生成的，则必须在acme服务器注册
+  if [[ "${register_new_key}" = "yes" ]]; then
+      echo -n "在ACME服务器注册新帐号密钥..."
+      [[ ! -z "${CA_NEW_REG}" ]] || exiterr "证书颁发机构不允许注册"
+      
+      if [[ -n "${CONTACT_EMAIL}" ]]; then  #如果提供了联系人的电子邮件，添加到注册请求
+        request_str='{"resource": "new-reg", "contact":["mailto:'"${CONTACT_EMAIL}"'"], "agreement": "'"$LICENSE"'"}'
+      else
+        request_str='{"resource": "new-reg", "agreement": "'"$LICENSE"'"}'
+      fi
+      (signed_request "${CA_NEW_REG}" "${request_str}" > "${ACCOUNT_KEY_JSON}") || 
+      (
+        rm "${ACCOUNT_KEY}" "${ACCOUNT_KEY_JSON}"
+        exiterr "注册帐号密钥错误"
+      )
+      echo '[done]'
   fi
 
-  if [[ -e "${cert}" ]]; then
-    echo -n "检查域名到期时间..."
-    valid="$(openssl x509 -enddate -noout -in "${cert}" | cut -d= -f2- )"
+  #dnspod请求
+  echo -n '获取domain_id...'
+  return=$(get_domain_id "$login_token" "$domain") || 
+  {
+      echo '[error]'
+      exiterr "$return"
+  }
+  domain_id=$return
+  echo "[$domain_id]"
 
-    if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
-      echo "[${valid} 大于${RENEW_DAYS}天]"
-    else
-      force_renew="yes"
-      echo "[${valid} 少于${RENEW_DAYS}天]"
-    fi
-  fi
+  echo -n '获取record_id...'
+  return=$(get_record_id "$login_token" "$domain_id" "_acme-challenge.$record") || 
+  {
+      echo '[error]'
+      exiterr "$return"
+  }
+  record_id=$return
+  if [ "$record_id" = '' ]; then
+      echo '[null]'
 
-  if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
-    sign_domain ${line}
+      echo -n '没有找到对应record_id，创建新record并获取id...'
+      return=$(create_record "$login_token" "$domain_id" "_acme-challenge.$record") || 
+      {
+          echo '[error]'
+          exiterr "$return"
+      }
+      record_id=$return
+      echo "[$record_id]"
   else
-    echo "无须更新"
+      echo "[$record_id]"
   fi
-done
-
-
-exit 0
 
 
 
+    
 
+  HOOK="./hook.sh"
+  CHALLENGETYPE="dns-01"
+  PARAM_DOMAIN="${record}.${domain}"
 
+  DOMAINS_TXT="${BASEDIR}/domains.txt"
 
+  #开始生成证书
+  ORIGIFS="${IFS}"
+  IFS=$'\n'
+  for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
+    IFS="${ORIGIFS}"
+    domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
+    record="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
+    morenames=$record
+    cert="${CERTDIR}/${domain}/cert.pem"
 
+    echo "处理[${domain} ${record}]"
+
+    force_renew="no"
+    if [[ -e "${cert}" ]]; then
+      echo -n "检查变更..."
+
+      certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
+      givennames="$(echo "${record}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
+
+      if [[ "${certnames}" = "${givennames}" ]]; then
+        echo "[unchanged]"
+      else
+        force_renew="yes"
+        echo "[changed]"
+      fi
+    fi
+
+    if [[ -e "${cert}" ]]; then
+      echo -n "检查域名到期时间..."
+      valid="$(openssl x509 -enddate -noout -in "${cert}" | cut -d= -f2- )"
+
+      if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
+        echo "[${valid} 大于${RENEW_DAYS}天]"
+      else
+        force_renew="yes"
+        echo "[${valid} 少于${RENEW_DAYS}天]"
+      fi
+    fi
+
+    if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
+      sign_domain ${line}
+    else
+      echo "无须更新"
+    fi
+  done
+}
+
+main
 clean
+
 exit 0
