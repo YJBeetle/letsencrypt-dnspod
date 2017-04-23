@@ -412,10 +412,6 @@ clean()
   :
   #清理
   #rm -rf ${TMPDIR}
-  # remove temporary domains.txt file if used
-  [[ -n "${PARAM_DOMAIN:-}" ]] && rm -f "${DOMAINS_TXT}"
-  # remove temporary domains.txt file if used
-  #[[ -n "${PARAM_DOMAIN:-}" && -n "${DOMAINS_TXT:-}" ]] && rm "${DOMAINS_TXT}"
 }
 
 exiterr() { #错误并退出
@@ -810,18 +806,7 @@ HOOK="./hook.sh"
 CHALLENGETYPE="dns-01"
 PARAM_DOMAIN="${record}.${domain}"
 
-
-
-if [[ -n "${PARAM_DOMAIN:-}" ]]; then
-  DOMAINS_TXT="$(_mktemp)"
-  printf -- "${PARAM_DOMAIN}" > "${DOMAINS_TXT}"
-elif [[ -e "${DOMAINS_TXT}" ]]; then
-  if [[ ! -r "${DOMAINS_TXT}" ]]; then
-    _exiterr "domains.txt found but not readable"
-  fi
-else
-  _exiterr "domains.txt not found and --domain not given"
-fi
+DOMAINS_TXT="${BASEDIR}/domains.txt"
 
 # Generate certificates for all domains found in domains.txt. Check if existing certificate are about to expire
 ORIGIFS="${IFS}"
