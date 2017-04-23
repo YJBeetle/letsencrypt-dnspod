@@ -131,6 +131,30 @@ http_request() {
   rm -f "${tempcont}"
 }
 
+# Send signed request
+signed_request() {
+  # Encode payload as urlbase64
+  payload64="$(printf '%s' "${2}" | urlbase64)"
+
+  # Retrieve nonce from acme-server
+  nonce="$(http_request head "${CA}" | grep Replay-Nonce: | awk -F ': ' '{print $2}' | tr -d '\n\r')"
+
+  # Build header with just our public key and algorithm information
+  header='{"alg": "RS256", "jwk": {"e": "'"${pubExponent64}"'", "kty": "RSA", "n": "'"${pubMod64}"'"}}'
+
+  # Build another header which also contains the previously received nonce and encode it as urlbase64
+  protected='{"alg": "RS256", "jwk": {"e": "'"${pubExponent64}"'", "kty": "RSA", "n": "'"${pubMod64}"'"}, "nonce": "'"${nonce}"'"}'
+  protected64="$(printf '%s' "${protected}" | urlbase64)"
+
+  # Sign header with nonce and our payload with our private key and encode signature as urlbase64
+  signed64="$(printf '%s' "${protected64}.${payload64}" | openssl dgst -sha256 -sign "${ACCOUNT_KEY}" | urlbase64)"
+
+  # Send header + extended header + payload + signature to the acme-server
+  data='{"header": '"${header}"', "protected": "'"${protected64}"'", "payload": "'"${payload64}"'", "signature": "'"${signed64}"'"}'
+
+  http_request post "${1}" "${data}"
+}
+
 #==============DNSPOD==============
 
 get_domain_id()
@@ -424,30 +448,6 @@ _mktemp() {
 _exiterr() {
   echo "ERROR: ${1}" >&2
   exit 1
-}
-
-# Send signed request
-signed_request() {
-  # Encode payload as urlbase64
-  payload64="$(printf '%s' "${2}" | urlbase64)"
-
-  # Retrieve nonce from acme-server
-  nonce="$(http_request head "${CA}" | grep Replay-Nonce: | awk -F ': ' '{print $2}' | tr -d '\n\r')"
-
-  # Build header with just our public key and algorithm information
-  header='{"alg": "RS256", "jwk": {"e": "'"${pubExponent64}"'", "kty": "RSA", "n": "'"${pubMod64}"'"}}'
-
-  # Build another header which also contains the previously received nonce and encode it as urlbase64
-  protected='{"alg": "RS256", "jwk": {"e": "'"${pubExponent64}"'", "kty": "RSA", "n": "'"${pubMod64}"'"}, "nonce": "'"${nonce}"'"}'
-  protected64="$(printf '%s' "${protected}" | urlbase64)"
-
-  # Sign header with nonce and our payload with our private key and encode signature as urlbase64
-  signed64="$(printf '%s' "${protected64}.${payload64}" | openssl dgst -sha256 -sign "${ACCOUNT_KEY}" | urlbase64)"
-
-  # Send header + extended header + payload + signature to the acme-server
-  data='{"header": '"${header}"', "protected": "'"${protected64}"'", "payload": "'"${payload64}"'", "signature": "'"${signed64}"'"}'
-
-  http_request post "${1}" "${data}"
 }
 
 # Extracts all subject names from a CSR
