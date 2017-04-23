@@ -416,7 +416,6 @@ init_system() {
   CA_NEW_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-cert)" &&
   CA_NEW_AUTHZ="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-authz)" &&
   CA_NEW_REG="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-reg)" &&
-  # shellcheck disable=SC2015
   CA_REVOKE_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value revoke-cert)" ||
   _exiterr "Problem retrieving ACME/CA-URLs, check if your configured CA points to the directory entrypoint."
 
@@ -772,7 +771,6 @@ sign_domain() {
 # Usage: --cron (-c)
 # Description: Sign/renew non-existant/changed/expiring certificates.
 command_sign_domains() {
-  init_system
 
   if [[ -n "${PARAM_DOMAIN:-}" ]]; then
     DOMAINS_TXT="$(_mktemp)"
@@ -904,11 +902,9 @@ fi
 
 
 
-export domain_id
-export record_id
-
 
 PARAM_DOMAIN="${record}.${domain}"
+init_system
 command_sign_domains
 
 
