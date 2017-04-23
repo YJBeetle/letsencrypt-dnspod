@@ -334,6 +334,10 @@ clean()
   :
   #清理
   #rm -rf ${TMPDIR}
+  # remove temporary domains.txt file if used
+  [[ -n "${PARAM_DOMAIN:-}" ]] && rm -f "${DOMAINS_TXT}"
+  # remove temporary domains.txt file if used
+  #[[ -n "${PARAM_DOMAIN:-}" && -n "${DOMAINS_TXT:-}" ]] && rm "${DOMAINS_TXT}"
 }
 
 exiterr() { #错误并退出
@@ -368,7 +372,6 @@ init_system() {
   
   HOOK="./hook.sh"
   CHALLENGETYPE="dns-01"
-
 
   # Get CA URLs
   CA_DIRECTORY="$(http_request get "${CA}")"
@@ -454,38 +457,18 @@ http_request() {
     curlret="${?}"
   else
     set -e
-    _exiterr "Unknown request method: ${1}"
+    exiterr "未知请求方式: ${1}"
   fi
   set -e
 
   if [[ ! "${curlret}" = "0" ]]; then
-    _exiterr "Problem connecting to server (${1} for ${2}; curl returned with ${curlret})"
+    exiterr "连接服务器出错(方式：${1}，地址：${2}，返回${curlret})"
   fi
 
   if [[ ! "${statuscode:0:1}" = "2" ]]; then
-    echo "  + ERROR: An error occurred while sending ${1}-request to ${2} (Status ${statuscode})" >&2
-    echo >&2
-    echo "Details:" >&2
-    cat "${tempcont}" >&2
-    echo >&2
-    echo >&2
-
-    # An exclusive hook for the {1}-request error might be useful (e.g., for sending an e-mail to admins)
-    if [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]]; then
-      errtxt=`cat ${tempcont}`
-      "${HOOK}" "request_failure" "${statuscode}" "${errtxt}" "${1}"
-    fi
-
+    tempcontstr=$(cat "${tempcont}")
     rm -f "${tempcont}"
-
-    # Wait for hook script to clean the challenge if used
-    if [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && [[ -n "${challenge_token:+set}" ]]; then
-      "${HOOK}" "clean_challenge" '' "${challenge_token}" "${keyauth}"
-    fi
-
-    # remove temporary domains.txt file if used
-    [[ -n "${PARAM_DOMAIN:-}" && -n "${DOMAINS_TXT:-}" ]] && rm "${DOMAINS_TXT}"
-    exit 1
+    exiterr "请求服务器出错(方式：${1}，地址：${2}，状态码：${statuscode})\n详情:\n${tempcontstr}"
   fi
 
   cat "${tempcont}"
@@ -867,8 +850,6 @@ command_sign_domains() {
     fi
   done
 
-  # remove temporary domains.txt file if used
-  [[ -n "${PARAM_DOMAIN:-}" ]] && rm -f "${DOMAINS_TXT}"
 
   exit 0
 }
