@@ -819,9 +819,16 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
   cert="${CERTDIR}/${domain}/cert.pem"
 
   echo "处理[${domain} ${record}]"
-  force_renew="no"
+
+  renew="yes"
+
   if [[ -e "${cert}" ]]; then
-    echo -n "域名已经存在，检查变更..."
+    echo "域名已经存在"
+    renew="no"
+  fi
+
+  if [[ -e "${cert}" ]]; then
+    echo -n "检查变更..."
 
     certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
     givennames="$(echo "${domain}" "${morenames}"| tr ' ' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
@@ -829,7 +836,7 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
     if [[ "${certnames}" = "${givennames}" ]]; then
       echo "[unchanged]"
     else
-      force_renew="yes"
+      renew="yes" #
       echo "[changed]"
     fi
   fi
@@ -841,13 +848,15 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
     if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
       echo "[${valid} 大于${RENEW_DAYS}天]"
     else
-      force_renew="yes"
+      renew="yes"
       echo "[${valid} 少于${RENEW_DAYS}天]"
     fi
   fi
 
-  if [[ "${force_renew}" = "yes" ]]; then
+  if [[ "${renew}" = "yes" ]]; then
     sign_domain ${line}
+  else
+    echo "无须更新"
   fi
 done
 
