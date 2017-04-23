@@ -398,11 +398,6 @@ check_dependencies() {
 }
 
 init() {
-  
-  HOOK="./hook.sh"
-  CHALLENGETYPE="dns-01"
-  PARAM_DOMAIN="${record}.${domain}"
-
   #获取CA URLs
   CA_DIRECTORY="$(http_request get "${CA}")"
   CA_NEW_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-cert)" &&
@@ -808,6 +803,12 @@ else
 fi
 
 
+
+  
+
+HOOK="./hook.sh"
+CHALLENGETYPE="dns-01"
+PARAM_DOMAIN="${record}.${domain}"
 
 
 
