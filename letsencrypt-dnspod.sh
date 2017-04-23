@@ -820,13 +820,7 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
 
   echo "处理[${domain} ${record}]"
 
-  renew="yes"
-
-  if [[ -e "${cert}" ]]; then
-    echo "域名已经存在"
-    renew="no"
-  fi
-
+  force_renew="no"
   if [[ -e "${cert}" ]]; then
     echo -n "检查变更..."
 
@@ -836,7 +830,7 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
     if [[ "${certnames}" = "${givennames}" ]]; then
       echo "[unchanged]"
     else
-      renew="yes" #
+      force_renew="yes"
       echo "[changed]"
     fi
   fi
@@ -848,13 +842,14 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
     if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
       echo "[${valid} 大于${RENEW_DAYS}天]"
     else
-      renew="yes"
+      force_renew="yes"
       echo "[${valid} 少于${RENEW_DAYS}天]"
     fi
   fi
 
-  if [[ "${renew}" = "yes" ]]; then
-    sign_domain ${line}
+  if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
+  :
+    # sign_domain ${line}
   else
     echo "无须更新"
   fi
