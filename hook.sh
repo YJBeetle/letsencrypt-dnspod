@@ -64,26 +64,6 @@ deploy_cert() {
     #   Timestamp when the specified certificate was created.
 }
 
-unchanged_cert() {
-    local DOMAIN="${1}" KEYFILE="${2}" CERTFILE="${3}" FULLCHAINFILE="${4}" CHAINFILE="${5}"
-
-    # This hook is called once for each certificate that is still
-    # valid and therefore wasn't reissued.
-    #
-    # Parameters:
-    # - DOMAIN
-    #   The primary domain name, i.e. the certificate common
-    #   name (CN).
-    # - KEYFILE
-    #   The path of the file containing the private key.
-    # - CERTFILE
-    #   The path of the file containing the signed certificate.
-    # - FULLCHAINFILE
-    #   The path of the file containing the full certificate chain.
-    # - CHAINFILE
-    #   The path of the file containing the intermediate certificate(s).
-}
-
 invalid_challenge() {
     local DOMAIN="${1}" RESPONSE="${2}"
 

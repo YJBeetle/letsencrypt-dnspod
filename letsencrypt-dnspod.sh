@@ -829,37 +829,24 @@ for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -
     if [[ "${certnames}" = "${givennames}" ]]; then
       echo "[unchanged]"
     else
-      echo "[changed]"
-      echo "域名信息不符合，旧为：${certnames}，新为：${givennames}，强制更新"
       force_renew="yes"
+      echo "[changed]"
     fi
   fi
 
   if [[ -e "${cert}" ]]; then
-    echo " + Checking expire date of existing cert..."
+    echo -n "检查域名到期时间..."
     valid="$(openssl x509 -enddate -noout -in "${cert}" | cut -d= -f2- )"
 
-    printf " + Valid till %s " "${valid}"
     if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
-      printf "(Longer than %d days). " "${RENEW_DAYS}"
-      if [[ "${force_renew}" = "yes" ]]; then
-        echo "Ignoring because renew was forced!"
-      else
-        # Certificate-Names unchanged and cert is still valid
-        echo "Skipping renew!"
-        [[ -n "${HOOK}" ]] && "${HOOK}" "unchanged_cert" "${domain}" "${CERTDIR}/${domain}/privkey.pem" "${CERTDIR}/${domain}/cert.pem" "${CERTDIR}/${domain}/fullchain.pem" "${CERTDIR}/${domain}/chain.pem"
-        continue
-      fi
+      echo "[${valid} 大于${RENEW_DAYS}天]"
     else
-      echo "(Less than ${RENEW_DAYS} days). Renewing!"
+      force_renew="yes"
+      echo "[${valid} 少于${RENEW_DAYS}天]"
     fi
   fi
 
-  # shellcheck disable=SC2086
-  if [[ "${PARAM_KEEP_GOING:-}" = "yes" ]]; then
-    sign_domain ${line} &
-    wait $! || true
-  else
+  if [[ "${force_renew}" = "yes" ]]; then
     sign_domain ${line}
   fi
 done
