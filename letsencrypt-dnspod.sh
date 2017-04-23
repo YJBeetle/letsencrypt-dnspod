@@ -373,7 +373,7 @@ init() {
   CHALLENGETYPE="dns-01"
   PARAM_DOMAIN="${record}.${domain}"
 
-  # 获取CA URLs
+  #获取CA URLs
   CA_DIRECTORY="$(http_request get "${CA}")"
   CA_NEW_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-cert)" &&
   CA_NEW_AUTHZ="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-authz)" &&
@@ -381,15 +381,14 @@ init() {
   CA_REVOKE_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value revoke-cert)" ||
   exiterr "检索ACME/CA-URLs出现问题, 检查配置文件CA是否指向entrypoint的directory."
 
-  # Checking for private key ...
+  #检查帐号私钥
   register_new_key="no"
-  # Check if private account key exists, if it doesn't exist yet generate a new one (rsa key)
-  if [[ ! -e "${ACCOUNT_KEY}" ]]; then
-    echo "+ Generating account key..."
+  if [[ ! -e "${ACCOUNT_KEY}" ]]; then  #如果帐号私钥不存在则生成一个新的密钥（rsa密钥）
+    echo "生成帐号密钥..."
     _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
     register_new_key="yes"
   fi
-  openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || _exiterr "Account key is not valid, can not continue."
+  openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
 
   # Get public components from private key and calculate thumbprint
   pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
