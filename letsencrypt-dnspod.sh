@@ -373,16 +373,13 @@ init() {
   CHALLENGETYPE="dns-01"
   PARAM_DOMAIN="${record}.${domain}"
 
-  # Get CA URLs
+  # 获取CA URLs
   CA_DIRECTORY="$(http_request get "${CA}")"
   CA_NEW_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-cert)" &&
   CA_NEW_AUTHZ="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-authz)" &&
   CA_NEW_REG="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value new-reg)" &&
   CA_REVOKE_CERT="$(printf "%s" "${CA_DIRECTORY}" | get_json_string_value revoke-cert)" ||
-  _exiterr "Problem retrieving ACME/CA-URLs, check if your configured CA points to the directory entrypoint."
-
-  # Export some environment variables to be used in hook script
-  export BASEDIR CERTDIR CONFIG
+  exiterr "检索ACME/CA-URLs出现问题, 检查配置文件CA是否指向entrypoint的directory."
 
   # Checking for private key ...
   register_new_key="no"
