@@ -383,18 +383,11 @@ init() {
 
   # Checking for private key ...
   register_new_key="no"
-  if [[ -n "${PARAM_ACCOUNT_KEY:-}" ]]; then
-    # a private key was specified from the command line so use it for this run
-    echo "Using private key ${PARAM_ACCOUNT_KEY} instead of account key"
-    ACCOUNT_KEY="${PARAM_ACCOUNT_KEY}"
-    ACCOUNT_KEY_JSON="${PARAM_ACCOUNT_KEY}.json"
-  else
-    # Check if private account key exists, if it doesn't exist yet generate a new one (rsa key)
-    if [[ ! -e "${ACCOUNT_KEY}" ]]; then
-      echo "+ Generating account key..."
-      _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
-      register_new_key="yes"
-    fi
+  # Check if private account key exists, if it doesn't exist yet generate a new one (rsa key)
+  if [[ ! -e "${ACCOUNT_KEY}" ]]; then
+    echo "+ Generating account key..."
+    _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
+    register_new_key="yes"
   fi
   openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || _exiterr "Account key is not valid, can not continue."
 
