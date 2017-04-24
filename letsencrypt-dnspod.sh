@@ -466,7 +466,7 @@ main()
       fi
 
       privkey="privkey.pem"
-      if [[ ! -r "${CERTDIR}/${domain}/privkey.pem" ]]; then  #如果老的私钥不存在或者不可写则生成新的私钥
+      if [[ ! -r "${CERTDIR}/${domain}/${privkey}" ]]; then  #如果老的私钥不存在或者不可写则生成新的私钥
         echo -n "生成私钥..."
         privkey="privkey-${timestamp}.pem"
         case "${KEY_ALGO}" in
@@ -492,8 +492,139 @@ main()
 
       echo -n "生成cert.pem..."
       crt_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
-      # shellcheck disable=SC2086
-      sign_csr "$(< "${CERTDIR}/${domain}/cert-${timestamp}.csr" )" ${altnames} 3>"${crt_path}"
+
+#////////////////////////////////
+      csr="$(cat "${CERTDIR}/${domain}/cert-${timestamp}.csr")"
+
+      if [ -z "${altnames}" ]; then
+        altnames="$( extract_altnames "${csr}" )"
+      fi
+
+      if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
+        _exiterr "Certificate authority doesn't allow certificate signing"
+      fi
+
+      local idx=0
+      if [[ -n "${ZSH_VERSION:-}" ]]; then
+        local -A challenge_altnames challenge_uris challenge_tokens keyauths deploy_args
+      else
+        local -a challenge_altnames challenge_uris challenge_tokens keyauths deploy_args
+      fi
+
+      # Request challenges
+      for altname in ${altnames}; do
+        # Ask the acme-server for new challenge token and extract them from the resulting json block
+        echo " + Requesting challenge for ${altname}..."
+        response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
+
+        challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
+        if [ "${challenge_status}" = "valid" ]; then
+          echo " + Already validated!"
+          continue
+        fi
+
+        challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
+        repl=$'\n''{' # fix syntax highlighting in Vim
+        challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""${CHALLENGETYPE}"\")"
+        challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
+        challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
+
+        if [[ -z "${challenge_token}" ]] || [[ -z "${challenge_uri}" ]]; then
+          _exiterr "Can't retrieve challenges (${response})"
+        fi
+
+        # Challenge response consists of the challenge token and the thumbprint of our public certificate
+        keyauth="${challenge_token}.${thumbprint}"
+
+        case "${CHALLENGETYPE}" in
+          "dns-01")
+            # Generate DNS entry content for dns-01 validation
+            keyauth_hook="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
+            ;;
+        esac
+
+        challenge_altnames[${idx}]="${altname}"
+        challenge_uris[${idx}]="${challenge_uri}"
+        keyauths[${idx}]="${keyauth}"
+        challenge_tokens[${idx}]="${challenge_token}"
+        # Note: assumes args will never have spaces!
+        deploy_args[${idx}]="${altname} ${challenge_token} ${keyauth_hook}"
+        idx=$((idx+1))
+      done
+      challenge_count="${idx}"
+
+      # Wait for hook script to deploy the challenges if used
+      if [[ ${challenge_count} -ne 0 ]]; then
+        # shellcheck disable=SC2068
+        [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[@]}
+      fi
+
+      # Respond to challenges
+      reqstatus="valid"
+      idx=0
+      if [ ${challenge_count} -ne 0 ]; then
+        for altname in "${challenge_altnames[@]:0}"; do
+          challenge_token="${challenge_tokens[${idx}]}"
+          keyauth="${keyauths[${idx}]}"
+
+          # Wait for hook script to deploy the challenge if used
+          # shellcheck disable=SC2086
+          [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[${idx}]}
+
+          # Ask the acme-server to verify our challenge and wait until it is no longer pending
+          echo " + Responding to challenge for ${altname}..."
+          result="$(signed_request "${challenge_uris[${idx}]}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
+
+          reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
+
+          while [[ "${reqstatus}" = "pending" ]]; do
+            sleep 1
+            result="$(http_request get "${challenge_uris[${idx}]}")"
+            reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
+          done
+
+          # Wait for hook script to clean the challenge if used
+          if [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && [[ -n "${challenge_token}" ]]; then
+            # shellcheck disable=SC2086
+            "${HOOK}" "clean_challenge" ${deploy_args[${idx}]}
+          fi
+          idx=$((idx+1))
+
+          if [[ "${reqstatus}" = "valid" ]]; then
+            echo " + Challenge is valid!"
+          else
+            [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && "${HOOK}" "invalid_challenge" "${altname}" "${result}"
+          fi
+        done
+      fi
+
+      # Wait for hook script to clean the challenges if used
+      # shellcheck disable=SC2068
+      if [[ ${challenge_count} -ne 0 ]]; then
+        [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && "${HOOK}" "clean_challenge" ${deploy_args[@]}
+      fi
+
+      if [[ "${reqstatus}" != "valid" ]]; then
+
+        _exiterr "Challenge is invalid! (returned: ${reqstatus}) (result: ${result})"
+      fi
+
+      # Finally request certificate from the acme-server and store it in cert-${timestamp}.pem and link from cert.pem
+      echo " + Requesting certificate..."
+      csr64="$( <<<"${csr}" openssl req -outform DER | urlbase64)"
+      crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | openssl base64 -e)"
+      crt="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
+
+      # Try to load the certificate to detect corruption
+      echo " + Checking certificate..."
+      _openssl x509 -text <<<"${crt}"
+
+      echo "${crt}" > "${crt_path}"
+
+      unset challenge_token
+      echo " + Done!"
+
+#////////////////////////////////
       echo "[done]"
 
       # Create fullchain.pem
@@ -679,147 +810,6 @@ extract_altnames() {
     altnames="$( <<<"${reqtext}" grep '^[[:space:]]*Subject:' | _sed -e 's/.* CN=([^ /,]*).*/\1/' )"
     echo "${altnames}"
   fi
-}
-
-# Create certificate for domain(s) and outputs it FD 3
-sign_csr() {
-  csr="${1}" # the CSR itself (not a file)
-
-  if { true >&3; } 2>/dev/null; then
-    : # fd 3 looks OK
-  else
-    _exiterr "sign_csr: FD 3 not open"
-  fi
-
-  shift 1 || true
-  altnames="${*:-}"
-  if [ -z "${altnames}" ]; then
-    altnames="$( extract_altnames "${csr}" )"
-  fi
-
-  if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
-    _exiterr "Certificate authority doesn't allow certificate signing"
-  fi
-
-  local idx=0
-  if [[ -n "${ZSH_VERSION:-}" ]]; then
-    local -A challenge_altnames challenge_uris challenge_tokens keyauths deploy_args
-  else
-    local -a challenge_altnames challenge_uris challenge_tokens keyauths deploy_args
-  fi
-
-  # Request challenges
-  for altname in ${altnames}; do
-    # Ask the acme-server for new challenge token and extract them from the resulting json block
-    echo " + Requesting challenge for ${altname}..."
-    response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
-
-    challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
-    if [ "${challenge_status}" = "valid" ]; then
-       echo " + Already validated!"
-       continue
-    fi
-
-    challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
-    repl=$'\n''{' # fix syntax highlighting in Vim
-    challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""${CHALLENGETYPE}"\")"
-    challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
-    challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
-
-    if [[ -z "${challenge_token}" ]] || [[ -z "${challenge_uri}" ]]; then
-      _exiterr "Can't retrieve challenges (${response})"
-    fi
-
-    # Challenge response consists of the challenge token and the thumbprint of our public certificate
-    keyauth="${challenge_token}.${thumbprint}"
-
-    case "${CHALLENGETYPE}" in
-      "dns-01")
-        # Generate DNS entry content for dns-01 validation
-        keyauth_hook="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
-        ;;
-    esac
-
-    challenge_altnames[${idx}]="${altname}"
-    challenge_uris[${idx}]="${challenge_uri}"
-    keyauths[${idx}]="${keyauth}"
-    challenge_tokens[${idx}]="${challenge_token}"
-    # Note: assumes args will never have spaces!
-    deploy_args[${idx}]="${altname} ${challenge_token} ${keyauth_hook}"
-    idx=$((idx+1))
-  done
-  challenge_count="${idx}"
-
-  # Wait for hook script to deploy the challenges if used
-  if [[ ${challenge_count} -ne 0 ]]; then
-    # shellcheck disable=SC2068
-    [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[@]}
-  fi
-
-  # Respond to challenges
-  reqstatus="valid"
-  idx=0
-  if [ ${challenge_count} -ne 0 ]; then
-    for altname in "${challenge_altnames[@]:0}"; do
-      challenge_token="${challenge_tokens[${idx}]}"
-      keyauth="${keyauths[${idx}]}"
-
-      # Wait for hook script to deploy the challenge if used
-      # shellcheck disable=SC2086
-      [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[${idx}]}
-
-      # Ask the acme-server to verify our challenge and wait until it is no longer pending
-      echo " + Responding to challenge for ${altname}..."
-      result="$(signed_request "${challenge_uris[${idx}]}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
-
-      reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
-
-      while [[ "${reqstatus}" = "pending" ]]; do
-        sleep 1
-        result="$(http_request get "${challenge_uris[${idx}]}")"
-        reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
-      done
-
-      # Wait for hook script to clean the challenge if used
-      if [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && [[ -n "${challenge_token}" ]]; then
-        # shellcheck disable=SC2086
-        "${HOOK}" "clean_challenge" ${deploy_args[${idx}]}
-      fi
-      idx=$((idx+1))
-
-      if [[ "${reqstatus}" = "valid" ]]; then
-        echo " + Challenge is valid!"
-      else
-        [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && "${HOOK}" "invalid_challenge" "${altname}" "${result}"
-      fi
-    done
-  fi
-
-  # Wait for hook script to clean the challenges if used
-  # shellcheck disable=SC2068
-  if [[ ${challenge_count} -ne 0 ]]; then
-    [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && "${HOOK}" "clean_challenge" ${deploy_args[@]}
-  fi
-
-  if [[ "${reqstatus}" != "valid" ]]; then
-
-    _exiterr "Challenge is invalid! (returned: ${reqstatus}) (result: ${result})"
-  fi
-
-  # Finally request certificate from the acme-server and store it in cert-${timestamp}.pem and link from cert.pem
-  echo " + Requesting certificate..."
-  csr64="$( <<<"${csr}" openssl req -outform DER | urlbase64)"
-  crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | openssl base64 -e)"
-  crt="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
-
-  # Try to load the certificate to detect corruption
-  echo " + Checking certificate..."
-  _openssl x509 -text <<<"${crt}"
-
-  echo "${crt}" >&3
-
-  unset challenge_token
-  echo " + Done!"
 }
 
 #====================================dehydrated
