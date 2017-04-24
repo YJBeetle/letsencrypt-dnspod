@@ -476,7 +476,7 @@ main()
         echo "[done]"
       fi
       
-      echo -n "生成签名请求..."
+      echo -n "生成cert.csr..."
       SAN=""
       for altname in ${altnames}; do
         SAN+="DNS:${altname}, "
@@ -488,10 +488,13 @@ main()
       printf "[SAN]\nsubjectAltName=%s" "${SAN}" >> "${tmp_openssl_cnf}"
       openssl req -new -sha256 -key "${CERTDIR}/${domain}/${privkey}" -out "${CERTDIR}/${domain}/cert-${timestamp}.csr" -subj "/CN=${domain}/" -reqexts SAN -config "${tmp_openssl_cnf}"
       rm -f "${tmp_openssl_cnf}"
+      echo "[done]"
 
+      echo -n "生成cert.pem..."
       crt_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
       # shellcheck disable=SC2086
       sign_csr "$(< "${CERTDIR}/${domain}/cert-${timestamp}.csr" )" ${altnames} 3>"${crt_path}"
+      echo "[done]"
 
       # Create fullchain.pem
       echo " + Creating fullchain.pem..."
