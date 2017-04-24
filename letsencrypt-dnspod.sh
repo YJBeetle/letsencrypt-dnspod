@@ -502,10 +502,10 @@ main()
 
       idx=0
 
-      #请求验证
+      #请求验证令牌
       for altname in ${altnames}; do
-        # Ask the acme-server for new challenge token and extract them from the resulting json block
-        echo " + Requesting challenge for ${altname}..."
+        #向acme服务器请求新的验证令牌，并从json中提取它们
+        echo "请求验证令牌${altname}..."
         response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
 
         challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
