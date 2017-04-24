@@ -500,14 +500,9 @@ main()
         exiterr "证书颁发机构不允许证书签名"
       fi
 
-      local idx=0
-      if [[ -n "${ZSH_VERSION:-}" ]]; then
-        local -A challenge_altnames challenge_uris challenge_tokens keyauths deploy_args
-      else
-        local -a challenge_altnames challenge_uris challenge_tokens keyauths deploy_args
-      fi
+      idx=0
 
-      # Request challenges
+      #请求验证
       for altname in ${altnames}; do
         # Ask the acme-server for new challenge token and extract them from the resulting json block
         echo " + Requesting challenge for ${altname}..."
