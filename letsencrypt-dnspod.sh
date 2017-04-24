@@ -508,17 +508,18 @@ main()
         rm "${tmpchain}"
       fi
       cat "${CERTDIR}/${domain}/chain-${timestamp}.pem" >> "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
+      echo "[Done]"
 
       # Update symlinks
+      echo -n "更新符号连接..."
       [[ "${privkey}" = "privkey.pem" ]] || ln -sf "privkey-${timestamp}.pem" "${CERTDIR}/${domain}/privkey.pem"
-
       ln -sf "chain-${timestamp}.pem" "${CERTDIR}/${domain}/chain.pem"
       ln -sf "fullchain-${timestamp}.pem" "${CERTDIR}/${domain}/fullchain.pem"
       ln -sf "cert-${timestamp}.csr" "${CERTDIR}/${domain}/cert.csr"
       ln -sf "cert-${timestamp}.pem" "${CERTDIR}/${domain}/cert.pem"
+      echo "[Done]"
 
       unset challenge_token
-      echo " + Done!"
     else
       echo "无须更新"
     fi
