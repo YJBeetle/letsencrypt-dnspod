@@ -450,30 +450,30 @@ main()
     fi
 
     if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
-      #开始更新证书
+      #开始签名域名
       altnames="$(echo "${record}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | tr '\n' ' ')"
       timestamp="$(date +%s)"
 
-      echo " + Signing domains..."
+      echo "开始签名域名..."
       if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
-        _exiterr "Certificate authority doesn't allow certificate signing"
+        exiterr "证书颁发机构不允许证书签名"
       fi
 
-      # If there is no existing certificate directory => make it
       if [[ ! -e "${CERTDIR}/${domain}" ]]; then
-        echo " + Creating new directory ${CERTDIR}/${domain} ..."
-        mkdir -p "${CERTDIR}/${domain}" || _exiterr "Unable to create directory ${CERTDIR}/${domain}"
+        echo -n "创建目录：${CERTDIR}/${domain}..."
+        mkdir -p "${CERTDIR}/${domain}" || exiterr "创建失败${CERTDIR}/${domain}"
+        echo "[done]"
       fi
 
       privkey="privkey.pem"
-      # generate a new private key if we need or want one
-      if [[ ! -r "${CERTDIR}/${domain}/privkey.pem" ]] || [[ "${PRIVATE_KEY_RENEW}" = "yes" ]]; then
-        echo " + Generating private key..."
+      if [[ ! -r "${CERTDIR}/${domain}/privkey.pem" ]]; then  #如果老的私钥不存在或者不可写则生成新的私钥
+        echo -n "生成私钥..."
         privkey="privkey-${timestamp}.pem"
         case "${KEY_ALGO}" in
-          rsa) _openssl genrsa -out "${CERTDIR}/${domain}/privkey-${timestamp}.pem" "${KEYSIZE}";;
-          prime256v1|secp384r1) _openssl ecparam -genkey -name "${KEY_ALGO}" -out "${CERTDIR}/${domain}/privkey-${timestamp}.pem";;
+          rsa) _openssl genrsa -out "${CERTDIR}/${domain}/${privkey}" "${KEYSIZE}";;
+          prime256v1|secp384r1) _openssl ecparam -genkey -name "${KEY_ALGO}" -out "${CERTDIR}/${domain}/${privkey}";;
         esac
+        echo "[done]"
       fi
       # move rolloverkey into position (if any)
       if [[ -r "${CERTDIR}/${domain}/privkey.pem" && -r "${CERTDIR}/${domain}/privkey.roll.pem" && "${PRIVATE_KEY_RENEW}" = "yes" && "${PRIVATE_KEY_ROLLOVER}" = "yes" ]]; then
@@ -607,7 +607,7 @@ loadcfg()
   fi
 
   #KEY_ALGO检查
-  [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || _exiterr "Unknown public key algorithm ${KEY_ALGO}... can not continue."
+  [[ "${KEY_ALGO}" =~ ^(rsa|prime256v1|secp384r1)$ ]] || exiterr "未知的公钥算法${KEY_ALGO}"
 
 }
 
