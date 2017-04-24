@@ -490,7 +490,7 @@ main()
       rm -f "${tmp_openssl_cnf}"
       echo "[done]"
 
-      echo -n "生成cert.pem..."
+      echo "生成cert.pem..."
       crt_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
 
 #////////////////////////////////
@@ -616,7 +616,7 @@ main()
       echo " + Done!"
 
 #////////////////////////////////
-      echo "[done]"
+      # echo "[done]"
 
       # Create fullchain.pem
       echo -n "生成fullchain.pem..."
