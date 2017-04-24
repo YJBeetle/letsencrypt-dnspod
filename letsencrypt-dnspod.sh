@@ -497,7 +497,7 @@ main()
       echo "[done]"
 
       # Create fullchain.pem
-      echo " + Creating fullchain.pem..."
+      echo -n "生成fullchain.pem..."
       cat "${crt_path}" > "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
       tmpchain="$(_mktemp)"
       http_request get "$(openssl x509 -in "${CERTDIR}/${domain}/cert-${timestamp}.pem" -noout -text | grep 'CA Issuers - URI:' | cut -d':' -f2-)" > "${tmpchain}"
@@ -516,10 +516,6 @@ main()
       ln -sf "fullchain-${timestamp}.pem" "${CERTDIR}/${domain}/fullchain.pem"
       ln -sf "cert-${timestamp}.csr" "${CERTDIR}/${domain}/cert.csr"
       ln -sf "cert-${timestamp}.pem" "${CERTDIR}/${domain}/cert.pem"
-
-      # Wait for hook script to clean the challenge and to deploy cert if used
-      export KEY_ALGO
-      [[ -n "${HOOK}" ]] && "${HOOK}" "deploy_cert" "${domain}" "${CERTDIR}/${domain}/privkey.pem" "${CERTDIR}/${domain}/cert.pem" "${CERTDIR}/${domain}/fullchain.pem" "${CERTDIR}/${domain}/chain.pem" "${timestamp}"
 
       unset challenge_token
       echo " + Done!"
