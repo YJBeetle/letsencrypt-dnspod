@@ -475,27 +475,7 @@ main()
         esac
         echo "[done]"
       fi
-      # move rolloverkey into position (if any)
-      if [[ -r "${CERTDIR}/${domain}/privkey.pem" && -r "${CERTDIR}/${domain}/privkey.roll.pem" && "${PRIVATE_KEY_RENEW}" = "yes" && "${PRIVATE_KEY_ROLLOVER}" = "yes" ]]; then
-        echo " + Moving Rolloverkey into position....  "
-        mv "${CERTDIR}/${domain}/privkey.roll.pem" "${CERTDIR}/${domain}/privkey-tmp.pem"
-        mv "${CERTDIR}/${domain}/privkey-${timestamp}.pem" "${CERTDIR}/${domain}/privkey.roll.pem"
-        mv "${CERTDIR}/${domain}/privkey-tmp.pem" "${CERTDIR}/${domain}/privkey-${timestamp}.pem"
-      fi
-      # generate a new private rollover key if we need or want one
-      if [[ ! -r "${CERTDIR}/${domain}/privkey.roll.pem" && "${PRIVATE_KEY_ROLLOVER}" = "yes" && "${PRIVATE_KEY_RENEW}" = "yes" ]]; then
-        echo " + Generating private rollover key..."
-        case "${KEY_ALGO}" in
-          rsa) _openssl genrsa -out "${CERTDIR}/${domain}/privkey.roll.pem" "${KEYSIZE}";;
-          prime256v1|secp384r1) _openssl ecparam -genkey -name "${KEY_ALGO}" -out "${CERTDIR}/${domain}/privkey.roll.pem";;
-        esac
-      fi
-      # delete rolloverkeys if disabled
-      if [[ -r "${CERTDIR}/${domain}/privkey.roll.pem" && ! "${PRIVATE_KEY_ROLLOVER}" = "yes" ]]; then
-        echo " + Removing Rolloverkey (feature disabled)..."
-        rm -f "${CERTDIR}/${domain}/privkey.roll.pem"
-      fi
-
+      
       # Generate signing request config and the actual signing request
       echo " + Generating signing request..."
       SAN=""
