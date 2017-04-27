@@ -543,7 +543,6 @@ main()
       challenge_count="${idx}"
 
       #应用验证
-      reqstatus="valid"
       idx=0
       if [ ${challenge_count} -ne 0 ]; then
         for record in "${challenge_records[@]:0}"; do
@@ -585,13 +584,9 @@ main()
             echo "[valid]"
           else
             echo "[pending]"
+            exiterr '验证失败'
           fi
         done
-      fi
-
-      if [[ "${reqstatus}" != "valid" ]]; then
-
-        _exiterr "Challenge is invalid! (returned: ${reqstatus}) (result: ${result})"
       fi
 
       # Finally request certificate from the acme-server and store it in cert-${timestamp}.pem and link from cert.pem
