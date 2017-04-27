@@ -478,10 +478,9 @@ main()
       rm -f "${tmp_openssl_cnf}"
       echo "[done]"
 
-      echo "生成cert.pem..."
+      echo "开始生成cert.pem..."
       crt_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
 
-#////////////////////////////////
       csr="$(cat "${CERTDIR}/${domain}/cert-${timestamp}.csr")"
 
       if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
@@ -564,25 +563,25 @@ main()
         fi
       done
 
-      # Finally request certificate from the acme-server and store it in cert-${timestamp}.pem and link from cert.pem
-      echo " + Requesting certificate..."
+      #最后，从acme服务器请求证书，存储到cert.pem
+      echo -n "申请证书..."
       csr64="$( <<<"${csr}" openssl req -outform DER | urlbase64)"
       crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | openssl base64 -e)"
       crt="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
+      echo "[done]"
 
-      # Try to load the certificate to detect corruption
-      echo " + Checking certificate..."
+      #尝试加载证书以检测损坏
+      echo -n "检查证书..."
       _openssl x509 -text <<<"${crt}"
+      echo "[done]"
 
+      echo -n "写入证书..."
       echo "${crt}" > "${crt_path}"
+      echo "[done]"
 
       unset challenge_token
-      echo " + Done!"
 
-#////////////////////////////////
-      # echo "[done]"
-
-      # Create fullchain.pem
+      #生成fullchain.pem
       echo -n "生成fullchain.pem..."
       cat "${crt_path}" > "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
       tmpchain="$(_mktemp)"
@@ -596,7 +595,7 @@ main()
       cat "${CERTDIR}/${domain}/chain-${timestamp}.pem" >> "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
       echo "[Done]"
 
-      # Update symlinks
+      #更新符号连接
       echo -n "更新符号连接..."
       [[ "${privkey}" = "privkey.pem" ]] || ln -sf "privkey-${timestamp}.pem" "${CERTDIR}/${domain}/privkey.pem"
       ln -sf "chain-${timestamp}.pem" "${CERTDIR}/${domain}/chain.pem"
