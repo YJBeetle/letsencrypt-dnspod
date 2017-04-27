@@ -729,12 +729,6 @@ set -o pipefail
 umask 077 # paranoid umask, we're creating private keys
 
 
-# Print error message and exit with error
-_exiterr() {
-  echo "ERROR: ${1}" >&2
-  exit 1
-}
-
 #====================================dehydrated
 
 
