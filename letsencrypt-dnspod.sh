@@ -488,8 +488,6 @@ main()
         exiterr "证书颁发机构不允许证书签名"
       fi
 
-      idx=0
-
       #请求验证并获取令牌
       for record in ${records}; do
         altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
@@ -502,59 +500,37 @@ main()
         echo -n "检查是否已经验证..."
         challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
         echo "[$challenge_status]"
-        if [ "${challenge_status}" = "valid" ]; then
-          continue  #已经验证过，跳过循环
-        fi
+        if [ ! "${challenge_status}" = "valid" ]; then  #没有验证过，进行验证
 
-        #提取数据
-        challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
-        repl=$'\n''{' # fix syntax highlighting in Vim
-        challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""dns-01"\")"  #获取type为dns-01的条目
-        challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
-        challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
+          #提取数据
+          challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
+          repl=$'\n''{' # fix syntax highlighting in Vim
+          challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""dns-01"\")"  #获取type为dns-01的条目
 
-        echo -n "获取验证token..."
-        if [[ -z "${challenge_token}" ]]; then
-          echo '[fail]'
-          exiterr "验证token获取失败"
-        fi
-        echo "[$challenge_token]"
+          echo -n "获取验证token..."
+          challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
+          if [[ -z "${challenge_token}" ]]; then
+            echo '[fail]'
+            exiterr "验证token获取失败"
+          fi
+          echo "[$challenge_token]"
 
-        echo -n "获取验证uri..."
-        if [[ -z "${challenge_uri}" ]]; then
-          echo '[fail]'
-          exiterr "验证uri获取失败"
-        fi
-        echo "[$challenge_uri]"
+          echo -n "获取验证uri..."
+          challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
+          if [[ -z "${challenge_uri}" ]]; then
+            echo '[fail]'
+            exiterr "验证uri获取失败"
+          fi
+          echo "[$challenge_uri]"
 
-        #挑战响应包括挑战令牌和我们公钥的指纹
-        keyauth="${challenge_token}.${thumbprint}"
+          #挑战响应包括挑战令牌和我们公钥的指纹
+          keyauth="${challenge_token}.${thumbprint}"
+          #生成用于DNS验证的值
+          keyauth_dnspod="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
 
-        #生成DNS条目内容
-        keyauth_dnspod="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
-
-        challenge_records[${idx}]="${record}"
-        challenge_uris[${idx}]="${challenge_uri}"
-        keyauths[${idx}]="${keyauth}"
-        challenge_tokens[${idx}]="${challenge_token}"
-        keyauth_dnspods[${idx}]="${keyauth_dnspod}"
-        idx=$((idx+1))
-      done
-      challenge_count="${idx}"
-
-      #应用验证
-      idx=0
-      if [ ${challenge_count} -ne 0 ]; then
-        for record in "${challenge_records[@]:0}"; do
-          altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
-          challenge_token="${challenge_tokens[${idx}]}"
-          keyauth="${keyauths[${idx}]}"
-          keyauth_dnspod="${keyauth_dnspods[${idx}]}"
-
+          #去dnspod修改
           echo -n '修改record value...'
-
-          acmerecord="$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')"
-          return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${acmerecord}" "${keyauth_dnspod}") || 
+          return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')" "${keyauth_dnspod}") || 
           {
               echo '[error]'
               exiterr "$return"
@@ -567,18 +543,17 @@ main()
 
           #请求acme服务器进行验证挑战
           echo -n "验证挑战：${altname}..."
-          result="$(signed_request "${challenge_uris[${idx}]}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
+          result="$(signed_request "${challenge_uri}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
 
           reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
 
           while [[ "${reqstatus}" = "pending" ]]; do  #如果失败用get方式再试一次
             sleep 1
-            result="$(http_request get "${challenge_uris[${idx}]}")"
+            result="$(http_request get "${challenge_uri}")"
             reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
           done
 
           #在这里可加入删除txt记录的代码
-          idx=$((idx+1))
 
           if [[ "${reqstatus}" = "valid" ]]; then
             echo "[valid]"
@@ -586,8 +561,8 @@ main()
             echo "[pending]"
             exiterr '验证失败'
           fi
-        done
-      fi
+        fi
+      done
 
       # Finally request certificate from the acme-server and store it in cert-${timestamp}.pem and link from cert.pem
       echo " + Requesting certificate..."
