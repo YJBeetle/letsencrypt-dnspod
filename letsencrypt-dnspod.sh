@@ -368,41 +368,9 @@ main()
         echo '[done]'
     fi
 
-    #dnspod请求
-    echo -n '获取domain_id...'
-    return=$(get_domain_id "$login_token" "$domain") || 
-    {
-        echo '[error]'
-        exiterr "$return"
-    }
-    domain_id=$return
-    echo "[$domain_id]"
-
-    echo -n '获取record_id...'
-    return=$(get_record_id "$login_token" "$domain_id" "_acme-challenge.$record") || 
-    {
-        echo '[error]'
-        exiterr "$return"
-    }
-    record_id=$return
-    if [ "$record_id" = '' ]; then
-        echo '[null]'
-
-        echo -n '没有找到对应record_id，创建新record并获取id...'
-        return=$(create_record "$login_token" "$domain_id" "_acme-challenge.$record") || 
-        {
-            echo '[error]'
-            exiterr "$return"
-        }
-        record_id=$return
-        echo "[$record_id]"
-    else
-        echo "[$record_id]"
-    fi
-
     DOMAINS_TXT="${BASEDIR}/domains.txt"
 
-    #开始生成证书
+    #开始读取domains.txt并且逐个处理
     ORIGIFS="${IFS}"
     IFS=$'\n'
     for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
@@ -434,20 +402,19 @@ main()
             valid="$(openssl x509 -enddate -noout -in "${cert}" | cut -d= -f2- )"
 
             if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
-                echo "[${valid} 大于${RENEW_DAYS}天]"
+                echo "[${valid} 证书有效]"
             else
                 force_renew="yes"
-                echo "[${valid} 少于${RENEW_DAYS}天]"
+                echo "[${valid} 重新获取证书]"
             fi
         fi
 
         if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
-            #开始签名域名
             timestamp="$(date +%s)"
 
-            echo "开始签名域名..."
+            echo "开始签发证书..."
             if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
-                exiterr "证书颁发机构不允许证书签名"
+                exiterr "证书颁发机构不允许签发证书"
             fi
 
             if [[ ! -e "${CERTDIR}/${domain}" ]]; then
@@ -483,11 +450,17 @@ main()
 
             csr="$(cat "${CERTDIR}/${domain}/cert-${timestamp}.csr")"
 
-            if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
-                exiterr "证书颁发机构不允许证书签名"
-            fi
+            #dnspod请求
+            echo -n '获取domain_id...'
+            return=$(get_domain_id "${login_token}" "${domain}") || 
+            {
+                echo '[error]'
+                exiterr "${return}"
+            }
+            domain_id=${return}
+            echo "[${domain_id}]"
 
-        #请求验证并获取令牌
+            #请求验证并获取令牌
             for record in ${records}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
 
@@ -528,11 +501,33 @@ main()
                     keyauth_dnspod="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
 
                     #去dnspod修改
-                    echo -n '修改record value...'
-                    return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')" "${keyauth_dnspod}") || 
+                    record_acme="$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')"
+                    echo -n '获取record_id...'
+                    return=$(get_record_id "${login_token}" "${domain_id}" "${record_acme}") || 
                     {
                         echo '[error]'
-                        exiterr "$return"
+                        exiterr "${return}"
+                    }
+                    record_id=$return
+                    if [ "${record_id}" = '' ]; then
+                        echo '[null]'
+
+                        echo -n '没有找到对应record_id，创建新record并获取id...'
+                        return=$(create_record "${login_token}" "${domain_id}" "${record_acme}") || 
+                        {
+                            echo '[error]'
+                            exiterr "${return}"
+                        }
+                        record_id=${return}
+                        echo "[${record_id}]"
+                    else
+                        echo "[${record_id}]"
+                    fi
+                    echo -n '修改record value...'
+                    return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${record_acme}" "${keyauth_dnspod}") || 
+                    {
+                        echo '[error]'
+                        exiterr "${return}"
                     }
                     echo "[done]"
 
