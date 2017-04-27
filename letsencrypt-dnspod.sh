@@ -573,11 +573,7 @@ main()
             reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
           done
 
-          # Wait for hook script to clean the challenge if used
-          if [[ -n "${HOOK}" ]] && [[ -n "${challenge_token}" ]]; then
-            # shellcheck disable=SC2086
-            "${HOOK}" "clean_challenge" ${deploy_args[${idx}]}
-          fi
+          #在这里可加入删除txt记录的代码
           idx=$((idx+1))
 
           if [[ "${reqstatus}" = "valid" ]]; then

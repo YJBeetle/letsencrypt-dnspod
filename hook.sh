@@ -35,16 +35,5 @@ deploy_challenge() {
     echo "[done]"
 }
 
-clean_challenge() {
-    local DOMAIN="${1}" TOKEN_FILENAME="${2}" TOKEN_VALUE="${3}"
-
-    # This hook is called after attempting to validate each domain,
-    # whether or not validation was successful. Here you can delete
-    # files or DNS records that are no longer needed.
-    #
-    # The parameters are the same as for deploy_challenge.
-}
-
-
 HANDLER="$1"; shift
 "$HANDLER" "$@"
