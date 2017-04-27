@@ -498,18 +498,20 @@ main()
 
       idx=0
 
-      #请求验证令牌
+      #请求验证并获取令牌
       for record in ${records}; do
         altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
 
-        #向acme服务器请求新的验证令牌，并从json中提取它们
-        echo "请求验证令牌${altname}..."
+        #向acme服务器请求新的验证，并从json中提取信息
+        echo -n "请求验证：${altname}..."
         response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
+        echo "[done]"
 
+        echo -n "检查是否已经验证..."
         challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
+        echo "[$challenge_status]"
         if [ "${challenge_status}" = "valid" ]; then
-          echo " + Already validated!"
-          continue
+          continue  #已经验证过，跳过循环
         fi
 
         challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
