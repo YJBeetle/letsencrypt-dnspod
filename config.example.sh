@@ -1,12 +1,6 @@
 #login_token
 export login_token='id,token'
 
-#domain
-export domain='example.com'
-
-#record
-export record='www'
-
 #letsencrypt服务器设定
 CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
 #CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
