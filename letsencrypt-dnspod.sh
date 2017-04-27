@@ -500,7 +500,12 @@ main()
       idx=0
 
       #请求验证令牌
-      for altname in ${altnames}; do
+      for record in ${records}; do
+        altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
+echo 
+echo ===
+echo $altname
+echo +++
         #向acme服务器请求新的验证令牌，并从json中提取它们
         echo "请求验证令牌${altname}..."
         response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
