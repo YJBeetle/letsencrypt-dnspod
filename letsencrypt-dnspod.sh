@@ -531,13 +531,13 @@ main()
         keyauth="${challenge_token}.${thumbprint}"
 
         #生成DNS条目内容
-        keyauth_hook="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
+        keyauth_dnspod="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
 
         challenge_records[${idx}]="${record}"
         challenge_uris[${idx}]="${challenge_uri}"
         keyauths[${idx}]="${keyauth}"
         challenge_tokens[${idx}]="${challenge_token}"
-        keyauth_hooks[${idx}]="${keyauth_hook}"
+        keyauth_dnspods[${idx}]="${keyauth_dnspod}"
         idx=$((idx+1))
       done
       challenge_count="${idx}"
@@ -550,12 +550,12 @@ main()
           altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
           challenge_token="${challenge_tokens[${idx}]}"
           keyauth="${keyauths[${idx}]}"
-          keyauth_hook="${keyauth_hooks[${idx}]}"
+          keyauth_dnspod="${keyauth_dnspods[${idx}]}"
 
           echo -n '修改record value...'
 
           acmerecord="$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')"
-          return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${acmerecord}" "${keyauth_hook}") || 
+          return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${acmerecord}" "${keyauth_dnspod}") || 
           {
               echo '[error]'
               exiterr "$return"
