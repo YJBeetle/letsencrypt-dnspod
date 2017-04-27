@@ -7,33 +7,33 @@ read_xml_dom() {
     read -d \< ENTITY CONTENT #read分隔符改为<
     local ret=$?
     
-    if [[ $ENTITY =~ ^[[:space:]]*$ ]] && [[ $CONTENT =~ ^[[:space:]]*$ ]]; then
-        return $ret
+    if [[ ${ENTITY} =~ ^[[:space:]]*$ ]] && [[ ${CONTENT} =~ ^[[:space:]]*$ ]]; then
+        return ${ret}
     fi
 
-    if [[ "$ENTITY" =~ ^\?xml[[:space:]]*(.*)\?$ ]]; then #使用正则去除问号和xml字符
+    if [[ "${ENTITY}" =~ ^\?xml[[:space:]]*(.*)\?$ ]]; then #使用正则去除问号和xml字符
         ENTITY=''
         return 0
-    elif [[ "$ENTITY" = \!\[CDATA\[*\]\] ]]; then #CDATA
+    elif [[ "${ENTITY}" = \!\[CDATA\[*\]\] ]]; then #CDATA
         CONTENT=${ENTITY}
         CONTENT=${CONTENT#*![CDATA[}
         CONTENT=${CONTENT%]]*}
         ENTITY="![CDATA]"
         return 0
-    elif [[ "$ENTITY" = \!--*-- ]]; then #注释
+    elif [[ "${ENTITY}" = \!--*-- ]]; then #注释
         return 0
     else #普通节点
-        if [[ "$ENTITY" = /* ]]; then #节点末尾
-            DOMLVL=$[$DOMLVL - 1] #节点等级-1
+        if [[ "${ENTITY}" = /* ]]; then #节点末尾
+            DOMLVL=$[${DOMLVL} - 1] #节点等级-1
             return 0
-        elif [[ "$ENTITY" = */ ]]; then #节点没有子节点
+        elif [[ "${ENTITY}" = */ ]]; then #节点没有子节点
             :
-        elif [ ! "$ENTITY" = '' ]; then #新节点
-            DOMLVL=$[$DOMLVL + 1] 
+        elif [ ! "${ENTITY}" = '' ]; then #新节点
+            DOMLVL=$[${DOMLVL} + 1] 
         fi
     fi
 
-    return $ret
+    return ${ret}
 }
 
 # Create (identifiable) temporary files
@@ -169,42 +169,42 @@ get_domain_id()
     domain=$2
 
     local DOMLVL=0 #初始化节点
-    curl -k https://dnsapi.cn/Domain.List -d "login_token=$login_token" 2>/dev/null >./tmp/get_domain_id.xml
+    curl -k https://dnsapi.cn/Domain.List -d "login_token=${login_token}" 2>/dev/null >./tmp/get_domain_id.xml
     while read_xml_dom; do
-        if [ "$ENTITY" = 'item' ]; then
-            itemlevel=$DOMLVL
+        if [ "${ENTITY}" = 'item' ]; then
+            itemlevel=${DOMLVL}
             id=''
             name=''
         fi
-        if [[ "$ENTITY" = '/item' ]] && [[ $DOMLVL < $itemlevel ]] ; then
+        if [[ "${ENTITY}" = '/item' ]] && [[ ${DOMLVL} < ${itemlevel} ]] ; then
             id=''
             name=''
         fi
-        if [[ "$ENTITY" = 'id' ]] || [[ "$ENTITY" = 'name' ]]; then
-            if [ "$ENTITY" = 'id' ]; then
-                id="$CONTENT"
+        if [[ "${ENTITY}" = 'id' ]] || [[ "${ENTITY}" = 'name' ]]; then
+            if [ "${ENTITY}" = 'id' ]; then
+                id="${CONTENT}"
             fi
-            if [ "$ENTITY" = 'name' ]; then
-                name="$CONTENT"
+            if [ "${ENTITY}" = 'name' ]; then
+                name="${CONTENT}"
             fi
-            if [ "$name" = "$domain" ]; then
-                okid="$id";
+            if [ "${name}" = "${domain}" ]; then
+                okid="${id}";
             fi
         fi
-        if [ "$ENTITY" = 'code' ]; then
-            code="$CONTENT"
+        if [ "${ENTITY}" = 'code' ]; then
+            code="${CONTENT}"
         fi
-        if [ "$ENTITY" = 'message' ]; then
-            message="$CONTENT"
+        if [ "${ENTITY}" = 'message' ]; then
+            message="${CONTENT}"
         fi
     done < ./tmp/get_domain_id.xml
 
-    if [ "$code" = '1' ]; then
-        echo "$okid";
+    if [ "${code}" = '1' ]; then
+        echo "${okid}";
         return 0;
     else
-        echo "$message";
-        return $code;
+        echo "${message}";
+        return ${code};
     fi
 }
 
@@ -218,42 +218,42 @@ get_record_id()
     id=''
     name=''
     okid=''
-    curl -k https://dnsapi.cn/Record.List -d "login_token=$login_token&domain_id=$domain_id" 2>/dev/null >./tmp/get_record_id.xml
+    curl -k https://dnsapi.cn/Record.List -d "login_token=${login_token}&domain_id=${domain_id}" 2>/dev/null >./tmp/get_record_id.xml
     while read_xml_dom; do
-        if [ "$ENTITY" = 'item' ]; then
-            itemlevel=$DOMLVL
+        if [ "${ENTITY}" = 'item' ]; then
+            itemlevel=${DOMLVL}
             id=''
             name=''
         fi
-        if [[ "$ENTITY" = '/item' ]] && [[ $DOMLVL < $itemlevel ]] ; then
+        if [[ "${ENTITY}" = '/item' ]] && [[ ${DOMLVL} < ${itemlevel} ]] ; then
             id=''
             name=''
         fi
-        if [[ "$ENTITY" = 'id' ]] || [[ "$ENTITY" = 'name' ]]; then
-            if [ "$ENTITY" = 'id' ]; then
-                id=$CONTENT
+        if [[ "${ENTITY}" = 'id' ]] || [[ "${ENTITY}" = 'name' ]]; then
+            if [ "${ENTITY}" = 'id' ]; then
+                id=${CONTENT}
             fi
-            if [ "$ENTITY" = 'name' ]; then
-                name=$CONTENT
+            if [ "${ENTITY}" = 'name' ]; then
+                name=${CONTENT}
             fi
-            if [ "$name" = "$record" ]; then
-                okid=$id;
+            if [ "${name}" = "${record}" ]; then
+                okid=${id};
             fi
         fi
-        if [ "$ENTITY" = 'code' ]; then
-            code=$CONTENT
+        if [ "${ENTITY}" = 'code' ]; then
+            code=${CONTENT}
         fi
-        if [ "$ENTITY" = 'message' ]; then
-            message="$CONTENT"
+        if [ "${ENTITY}" = 'message' ]; then
+            message="${CONTENT}"
         fi
     done < ./tmp/get_record_id.xml
 
-    if [ "$code" = '1' ]; then
-        echo "$okid";
+    if [ "${code}" = '1' ]; then
+        echo "${okid}";
         return 0;
     else
-        echo "$message";
-        return $code;
+        echo "${message}";
+        return ${code};
     fi
 }
 
@@ -265,25 +265,25 @@ create_record()
 
     local DOMLVL=0 #初始化节点
 
-    curl -k https://dnsapi.cn/Record.Create -d "login_token=$login_token&domain_id=$domain_id&sub_domain=$record&record_type=TXT&record_line=默认&value=null" 2>/dev/null >./tmp/create_record.xml
+    curl -k https://dnsapi.cn/Record.Create -d "login_token=${login_token}&domain_id=${domain_id}&sub_domain=${record}&record_type=TXT&record_line=默认&value=null" 2>/dev/null >./tmp/create_record.xml
     while read_xml_dom; do
-        if [ "$ENTITY" = 'id' ]; then
-            id="$CONTENT"
+        if [ "${ENTITY}" = 'id' ]; then
+            id="${CONTENT}"
         fi
-        if [ "$ENTITY" = 'code' ]; then
-            code=$CONTENT
+        if [ "${ENTITY}" = 'code' ]; then
+            code=${CONTENT}
         fi
-        if [ "$ENTITY" = 'message' ]; then
-            message="$CONTENT"
+        if [ "${ENTITY}" = 'message' ]; then
+            message="${CONTENT}"
         fi
     done < ./tmp/create_record.xml
 
-    if [ "$code" = '1' ]; then
-        echo "$id";
+    if [ "${code}" = '1' ]; then
+        echo "${id}";
         return 0;
     else
-        echo "$message";
-        return $code;
+        echo "${message}";
+        return ${code};
     fi
 }
 
@@ -299,19 +299,19 @@ modify_record()
 
     curl -k https://dnsapi.cn/Record.Modify -d "login_token=${login_token}&domain_id=${domain_id}&record_id=${record_id}&sub_domain=${record}&record_type=TXT&record_line=默认&value=${value}" 2>/dev/null >./tmp/modify_record.xml
     while read_xml_dom; do
-        if [ "$ENTITY" = 'code' ]; then
-            code=$CONTENT
+        if [ "${ENTITY}" = 'code' ]; then
+            code=${CONTENT}
         fi
-        if [ "$ENTITY" = 'message' ]; then
-            message="$CONTENT"
+        if [ "${ENTITY}" = 'message' ]; then
+            message="${CONTENT}"
         fi
     done < ./tmp/modify_record.xml
 
-    if [ "$code" = '1' ]; then
+    if [ "${code}" = '1' ]; then
         return 0;
     else
-        echo "$message";
-        return $code;
+        echo "${message}";
+        return ${code};
     fi
 }
 
@@ -348,7 +348,7 @@ main()
     pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
     pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
     thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
-    echo "[$thumbprint]"
+    echo "[${thumbprint}]"
 
     #如果刚刚密钥是新生成的，则必须在acme服务器注册
     if [[ "${register_new_key}" = "yes" ]]; then
@@ -356,9 +356,9 @@ main()
         [[ ! -z "${CA_NEW_REG}" ]] || exiterr "证书颁发机构不允许注册"
         
         if [[ -n "${CONTACT_EMAIL}" ]]; then  #如果提供了联系人的电子邮件，添加到注册请求
-            request_str='{"resource": "new-reg", "contact":["mailto:'"${CONTACT_EMAIL}"'"], "agreement": "'"$LICENSE"'"}'
+            request_str='{"resource": "new-reg", "contact":["mailto:'"${CONTACT_EMAIL}"'"], "agreement": "'"${LICENSE}"'"}'
         else
-            request_str='{"resource": "new-reg", "agreement": "'"$LICENSE"'"}'
+            request_str='{"resource": "new-reg", "agreement": "'"${LICENSE}"'"}'
         fi
         (signed_request "${CA_NEW_REG}" "${request_str}" > "${ACCOUNT_KEY_JSON}") || 
         (
@@ -378,7 +378,6 @@ main()
         login_token="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
         domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
         records="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
-        morenames=$records
         cert="${CERTDIR}/${domain}/cert.pem"
 
         echo "处理[${domain}]"
@@ -406,95 +405,80 @@ main()
                 echo "[${valid} 证书有效]"
             else
                 force_renew="yes"
-                echo "[${valid} 重新获取证书]"
+                echo "[${valid} 过期，重新获取证书]"
             fi
         fi
 
         if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
             timestamp="$(date +%s)"
 
-            echo "开始签发证书..."
             if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
                 exiterr "证书颁发机构不允许签发证书"
             fi
 
             if [[ ! -e "${CERTDIR}/${domain}" ]]; then
-                echo -n "创建目录：${CERTDIR}/${domain}..."
-                mkdir -p "${CERTDIR}/${domain}" || exiterr "创建失败${CERTDIR}/${domain}"
+                echo -n "首次创建目录：${CERTDIR}/${domain}..."
+                mkdir -p "${CERTDIR}/${domain}" || (echo "[error]"; exiterr "创建失败${CERTDIR}/${domain}")
                 echo "[done]"
             fi
 
-            privkey="privkey.pem"
-            if [[ ! -r "${CERTDIR}/${domain}/${privkey}" ]]; then  #如果老的私钥不存在或者不可写则生成新的私钥
-                echo -n "生成私钥..."
-                privkey="privkey-${timestamp}.pem"
+            privkey_path="${CERTDIR}/${domain}/privkey.pem"
+            if [[ ! -r "${privkey_path}" ]]; then   #如果存在并且可写则无须重新生成
+                echo -n "首次生成privkey.pem..."
+                privkey_path="${CERTDIR}/${domain}/privkey-${timestamp}.pem"
                 case "${KEY_ALGO}" in
-                    rsa) _openssl genrsa -out "${CERTDIR}/${domain}/${privkey}" "${KEYSIZE}";;
-                    prime256v1|secp384r1) _openssl ecparam -genkey -name "${KEY_ALGO}" -out "${CERTDIR}/${domain}/${privkey}";;
+                    rsa) _openssl genrsa -out "${privkey_path}" "${KEYSIZE}";;
+                    prime256v1|secp384r1) _openssl ecparam -genkey -name "${KEY_ALGO}" -out "${privkey_path}";;
                 esac
                 echo "[done]"
             fi
         
             echo -n "生成cert.csr..."
+            certcsr_path="${CERTDIR}/${domain}/cert-${timestamp}.csr"
             SAN="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "DNS:'"${domain}"',";else print "DNS:"$0".'"${domain}"',"}' | tr '\n' ' ')"
-            SAN="${SAN%%, }"  #去除尾部逗号
+            SAN="${SAN%%, }"    #去除尾部逗号
             local tmp_openssl_cnf
             tmp_openssl_cnf="$(_mktemp)"
             cat "$(openssl version -d | cut -d\" -f2)/openssl.cnf" > "${tmp_openssl_cnf}"
             printf "[SAN]\nsubjectAltName=%s" "${SAN}" >> "${tmp_openssl_cnf}"
-            openssl req -new -sha256 -key "${CERTDIR}/${domain}/${privkey}" -out "${CERTDIR}/${domain}/cert-${timestamp}.csr" -subj "/CN=${domain}/" -reqexts SAN -config "${tmp_openssl_cnf}"
+            openssl req -new -sha256 -key "${privkey_path}" -out "${certcsr_path}" -subj "/CN=${domain}/" -reqexts SAN -config "${tmp_openssl_cnf}"
             rm -f "${tmp_openssl_cnf}"
+            certcsr="$(cat "${certcsr_path}")"
             echo "[done]"
 
-            echo "开始生成cert.pem..."
-            crt_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
-
-            csr="$(cat "${CERTDIR}/${domain}/cert-${timestamp}.csr")"
-
             #dnspod请求
-            echo -n '获取domain_id...'
-            return=$(get_domain_id "${login_token}" "${domain}") || 
-            {
-                echo '[error]'
-                exiterr "${return}"
-            }
+            echo -n '获取dnspod domain_id...'
+            return=$(get_domain_id "${login_token}" "${domain}") || (echo '[error]'; exiterr "${return}")
             domain_id=${return}
             echo "[${domain_id}]"
 
-            #请求验证并获取令牌
+            echo "开始逐个处理record"
+            #逐个请求验证并获取令牌
             for record in ${records}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
+                echo "处理[${altname}]"
 
                 #向acme服务器请求新的验证，并从json中提取信息
-                echo -n "请求验证：${altname}..."
+                echo -n "请求验证..."
                 response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
-                echo "[done]"
-
-                echo -n "检查是否已经验证..."
                 challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
-                echo "[$challenge_status]"
-                if [ ! "${challenge_status}" = "valid" ]; then  #没有验证过，进行验证
+                echo "[${challenge_status}]"
 
+                if [ ! "${challenge_status}" = "valid" ]; then  #没有验证过，进行验证
                     #提取数据
                     challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
                     repl=$'\n''{' # fix syntax highlighting in Vim
                     challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""dns-01"\")"  #获取type为dns-01的条目
 
-                    echo -n "获取验证token..."
+                    echo -n "获取token..."
                     challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
-                    if [[ -z "${challenge_token}" ]]; then
-                        echo '[fail]'
-                        exiterr "验证token获取失败"
-                    fi
-                    echo "[$challenge_token]"
+                    [[ -z "${challenge_token}" ]] && (echo '[fail]'; exiterr "token获取失败")
+                    echo "[${challenge_token}]"
 
-                    echo -n "获取验证uri..."
+                    echo -n "获取uri..."
                     challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
-                    if [[ -z "${challenge_uri}" ]]; then
-                        echo '[fail]'
-                        exiterr "验证uri获取失败"
-                    fi
-                    echo "[$challenge_uri]"
+                    [[ -z "${challenge_uri}" ]] && (echo '[fail]'; exiterr "uri获取失败")
+                    echo "[${challenge_uri}]"
 
                     #挑战响应包括挑战令牌和我们公钥的指纹
                     keyauth="${challenge_token}.${thumbprint}"
@@ -503,41 +487,28 @@ main()
 
                     #去dnspod修改
                     record_acme="$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')"
-                    echo -n '获取record_id...'
-                    return=$(get_record_id "${login_token}" "${domain_id}" "${record_acme}") || 
-                    {
-                        echo '[error]'
-                        exiterr "${return}"
-                    }
-                    record_id=$return
+                    echo -n '获取dnspod record_id...'
+                    return=$(get_record_id "${login_token}" "${domain_id}" "${record_acme}") || (echo '[error]'; exiterr "${return}")
+                    record_id=${return}
                     if [ "${record_id}" = '' ]; then
                         echo '[null]'
 
-                        echo -n '没有找到对应record_id，创建新record并获取id...'
-                        return=$(create_record "${login_token}" "${domain_id}" "${record_acme}") || 
-                        {
-                            echo '[error]'
-                            exiterr "${return}"
-                        }
+                        echo -n '没有找到record，创建新的并获取id...'
+                        return=$(create_record "${login_token}" "${domain_id}" "${record_acme}") || (echo '[error]'; exiterr "${return}")
                         record_id=${return}
-                        echo "[${record_id}]"
-                    else
-                        echo "[${record_id}]"
                     fi
-                    echo -n '修改record value...'
-                    return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${record_acme}" "${keyauth_dnspod}") || 
-                    {
-                        echo '[error]'
-                        exiterr "${return}"
-                    }
+                    echo "[${record_id}]"
+
+                    echo -n '修改dnspod record value...'
+                    return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${record_acme}" "${keyauth_dnspod}") || (echo '[error]'; exiterr "${return}")
                     echo "[done]"
 
                     echo -n '等待15s以便生效...'
                     sleep 15
                     echo "[done]"
 
-                    #请求acme服务器进行验证挑战
-                    echo -n "验证挑战：${altname}..."
+                    #请求acme服务器进行验证
+                    echo -n "请求acme服务器进行验证：${altname}..."
                     result="$(signed_request "${challenge_uri}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
 
                     reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
@@ -561,7 +532,7 @@ main()
 
             #最后，从acme服务器请求证书，存储到cert.pem
             echo -n "申请证书..."
-            csr64="$( <<<"${csr}" openssl req -outform DER | urlbase64)"
+            csr64="$( <<<"${certcsr}" openssl req -outform DER | urlbase64)"
             crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | openssl base64 -e)"
             crt="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
             echo "[done]"
@@ -572,14 +543,15 @@ main()
             echo "[done]"
 
             echo -n "写入证书..."
-            echo "${crt}" > "${crt_path}"
+            certpem_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
+            echo "${crt}" > "${certpem_path}"
             echo "[done]"
 
             unset challenge_token
 
             #生成fullchain.pem
             echo -n "生成fullchain.pem..."
-            cat "${crt_path}" > "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
+            cat "${certpem_path}" > "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
             tmpchain="$(_mktemp)"
             http_request get "$(openssl x509 -in "${CERTDIR}/${domain}/cert-${timestamp}.pem" -noout -text | grep 'CA Issuers - URI:' | cut -d':' -f2-)" > "${tmpchain}"
             if grep -q "BEGIN CERTIFICATE" "${tmpchain}"; then
@@ -593,7 +565,7 @@ main()
 
             #更新符号连接
             echo -n "更新符号连接..."
-            [[ "${privkey}" = "privkey.pem" ]] || ln -sf "privkey-${timestamp}.pem" "${CERTDIR}/${domain}/privkey.pem"
+            [[ "${privkey_path}" = "${CERTDIR}/${domain}/privkey.pem" ]] || ln -sf "privkey-${timestamp}.pem" "${CERTDIR}/${domain}/privkey.pem"
             ln -sf "chain-${timestamp}.pem" "${CERTDIR}/${domain}/chain.pem"
             ln -sf "fullchain-${timestamp}.pem" "${CERTDIR}/${domain}/fullchain.pem"
             ln -sf "cert-${timestamp}.csr" "${CERTDIR}/${domain}/cert.csr"
@@ -611,12 +583,12 @@ loadcfg()
 {
     #得到脚本所在目录
     SOURCE="${0}"
-    while [ -h "$SOURCE" ]; do #循环解析符号链接
-        DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-        SOURCE="$(readlink "$SOURCE")"
-        [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" #如果是相对符号链接则应该合并
+    while [ -h "${SOURCE}" ]; do #循环解析符号链接
+        DIR="$( cd -P "$( dirname "${SOURCE}" )" && pwd )"
+        SOURCE="$(readlink "${SOURCE}")"
+        [[ ${SOURCE} != /* ]] && SOURCE="${DIR}/${SOURCE}" #如果是相对符号链接则应该合并
     done
-    SCRIPTDIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    SCRIPTDIR="$( cd -P "$( dirname "${SOURCE}" )" && pwd )"
     BASEDIR="${SCRIPTDIR}"
     BASEDIR="${BASEDIR%%/}" #消除末尾斜杠
     [[ -d "${BASEDIR}" ]] || exiterr "BASEDIR获取错误: ${BASEDIR}" #获取完毕检查
