@@ -527,17 +527,17 @@ main()
             echo -n "申请证书..."
             csr64="$( <<<"${certcsr}" openssl req -outform DER | urlbase64)"
             crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | openssl base64 -e)"
-            crt="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
+            certpem="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
             echo "[done]"
 
             #尝试加载证书以检测损坏
             echo -n "检查证书..."
-            _openssl x509 -text <<<"${crt}"
+            _openssl x509 -text <<<"${certpem}"
             echo "[done]"
 
             echo -n "写入证书..."
             certpem_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
-            echo "${crt}" > "${certpem_path}"
+            echo "${certpem}" > "${certpem_path}"
             echo "[done]"
 
             unset challenge_token
