@@ -451,7 +451,6 @@ main()
 
     if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
       #开始签名域名
-      altnames="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | tr '\n' ' ')"
       timestamp="$(date +%s)"
 
       echo "开始签名域名..."
