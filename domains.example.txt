@@ -1,2 +1,3 @@
-#domain         #record(s)
-example.com     @ www
+#login_token                            #domain         #record(s)
+12345,ffffeeeeddddccccbbbbaaaa99998888  example.com     @ www
+12345,ffffeeeeddddccccbbbbaaaa99998888  example2.com    www test

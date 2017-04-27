@@ -375,12 +375,13 @@ main()
     IFS=$'\n'
     for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
         IFS="${ORIGIFS}"
-        domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
-        records="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
+        login_token="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
+        domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
+        records="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
         morenames=$records
         cert="${CERTDIR}/${domain}/cert.pem"
 
-        echo "处理[${domain} ${records}]"
+        echo "处理[${domain}]"
 
         force_renew="no"
         if [[ -e "${cert}" ]]; then
@@ -697,9 +698,8 @@ init() {
 
 clean()
 {
-    :
     #清理
-    #rm -rf ${TMPDIR}
+    rm -rf ${TMPDIR}
 }
 
 exiterr() { #错误并退出
