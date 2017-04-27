@@ -124,6 +124,7 @@ http_request() {
     set -e
 
     if [[ ! "${curlret}" = "0" ]]; then
+        rm -f "${tempcont}"
         exiterr "连接服务器出错(方式：${1}，地址：${2}，返回${curlret})"
     fi
 
@@ -437,7 +438,6 @@ main()
             certcsr_path="${CERTDIR}/${domain}/cert-${timestamp}.csr"
             SAN="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "DNS:'"${domain}"',";else print "DNS:"$0".'"${domain}"',"}' | tr '\n' ' ')"
             SAN="${SAN%%, }"    #去除尾部逗号
-            local tmp_openssl_cnf
             tmp_openssl_cnf="$(_mktemp)"
             cat "$(openssl version -d | cut -d\" -f2)/openssl.cnf" > "${tmp_openssl_cnf}"
             printf "[SAN]\nsubjectAltName=%s" "${SAN}" >> "${tmp_openssl_cnf}"
@@ -535,23 +535,29 @@ main()
             _openssl x509 -text <<<"${certpem}"
             echo "[done]"
 
-            echo -n "写入证书..."
+            echo -n "写入cert.pem..."
             certpem_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
             echo "${certpem}" > "${certpem_path}"
             echo "[done]"
 
-            #生成fullchain.pem
+            #chain.pem
             echo -n "生成fullchain.pem..."
-            cat "${certpem_path}" > "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
+            chainpem_path="${CERTDIR}/${domain}/chain-${timestamp}.pem"
             tmpchain="$(_mktemp)"
             http_request get "$(openssl x509 -in "${CERTDIR}/${domain}/cert-${timestamp}.pem" -noout -text | grep 'CA Issuers - URI:' | cut -d':' -f2-)" > "${tmpchain}"
             if grep -q "BEGIN CERTIFICATE" "${tmpchain}"; then
-              mv "${tmpchain}" "${CERTDIR}/${domain}/chain-${timestamp}.pem"
+              mv "${tmpchain}" "${chainpem_path}"
             else
-              openssl x509 -in "${tmpchain}" -inform DER -out "${CERTDIR}/${domain}/chain-${timestamp}.pem" -outform PEM
+              openssl x509 -in "${tmpchain}" -inform DER -out "${chainpem_path}" -outform PEM
               rm "${tmpchain}"
             fi
-            cat "${CERTDIR}/${domain}/chain-${timestamp}.pem" >> "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
+            echo "[done]"
+
+            #生成fullchain.pem
+            echo -n "写入fullchain.pem..."
+            fullchainpem_path="${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
+            cat "${certpem_path}" > "${fullchainpem_path}"
+            cat "${chainpem_path}" >> "${fullchainpem_path}"
             echo "[Done]"
 
             #更新符号连接
