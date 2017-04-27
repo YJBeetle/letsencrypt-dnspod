@@ -342,13 +342,13 @@ main()
       register_new_key="yes"
   fi
   openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
+  echo '[done]'
 
-  #从私钥获取公钥件并计算指纹
+  echo -n '从私钥获取公钥件并计算指纹...'
   pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
   pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
   thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
-
-  echo '[done]'
+  echo "[$thumbprint]"
 
   #如果刚刚密钥是新生成的，则必须在acme服务器注册
   if [[ "${register_new_key}" = "yes" ]]; then
@@ -533,7 +533,7 @@ main()
         fi
         echo "[$challenge_uri]"
 
-        # Challenge response consists of the challenge token and the thumbprint of our public certificate
+        #挑战响应包括挑战令牌和我们公钥的指纹
         keyauth="${challenge_token}.${thumbprint}"
 
         case "${CHALLENGETYPE}" in
