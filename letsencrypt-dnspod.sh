@@ -379,15 +379,15 @@ main()
         login_token="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
         domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
         records="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
-        cert="${CERTDIR}/${domain}/cert.pem"
 
-        echo "处理[${domain}]"
+        echo "处理domain[${domain}]"
 
         force_renew="no"
-        if [[ -e "${cert}" ]]; then
-            echo -n "检查变更..."
+        certpem_path="${CERTDIR}/${domain}/cert.pem"
+        if [[ -e "${certpem_path}" ]]; then
+            echo -n "检查证书DNS名称变更..."
 
-            certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
+            certnames="$(openssl x509 -in "${certpem_path}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
             givennames="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
 
             if [[ "${certnames}" = "${givennames}" ]]; then
@@ -398,11 +398,11 @@ main()
             fi
         fi
 
-        if [[ -e "${cert}" ]]; then
+        if [[ -e "${certpem_path}" ]]; then
             echo -n "检查域名到期时间..."
-            valid="$(openssl x509 -enddate -noout -in "${cert}" | cut -d= -f2- )"
+            valid="$(openssl x509 -enddate -noout -in "${certpem_path}" | cut -d= -f2- )"
 
-            if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${cert}"; then
+            if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${certpem_path}"; then
                 echo "[${valid} 证书有效]"
             else
                 force_renew="yes"
@@ -410,7 +410,7 @@ main()
             fi
         fi
 
-        if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
+        if [[ "${force_renew}" = "yes" ]] || [[ ! -e "${certpem_path}" ]]; then
             timestamp="$(date +%s)"
 
             if [[ -z "${CA_NEW_AUTHZ}" ]] || [[ -z "${CA_NEW_CERT}" ]]; then
@@ -455,7 +455,7 @@ main()
             #逐个请求验证并获取令牌
             for record in ${records}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
-                echo "处理[${altname}]"
+                echo "处理record[${altname}]"
 
                 #向acme服务器请求新的验证，并从json中提取信息
                 echo -n "请求验证..."
