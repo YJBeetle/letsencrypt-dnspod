@@ -535,12 +535,8 @@ main()
         #挑战响应包括挑战令牌和我们公钥的指纹
         keyauth="${challenge_token}.${thumbprint}"
 
-        case "${CHALLENGETYPE}" in
-          "dns-01")
-            # Generate DNS entry content for dns-01 validation
-            keyauth_hook="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
-            ;;
-        esac
+        #生成DNS条目内容
+        keyauth_hook="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
 
         challenge_altnames[${idx}]="${altname}"
         challenge_uris[${idx}]="${challenge_uri}"
