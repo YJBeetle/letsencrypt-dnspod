@@ -714,27 +714,11 @@ exiterr() { #错误并退出
   exit 1
 }
 
-#====================================dehydrated
-#!/usr/bin/env bash
-
-# dehydrated by lukas2511
-# Source: https://github.com/lukas2511/dehydrated
-#
-# This script is licensed under The MIT License (see LICENSE for more information).
-
 set -e
 set -u
 set -o pipefail
 [[ -n "${ZSH_VERSION:-}" ]] && set -o SH_WORD_SPLIT && set +o FUNCTION_ARGZERO
 umask 077 # paranoid umask, we're creating private keys
-
-
-#====================================dehydrated
-
-
-
-
-
 
 main
 clean
