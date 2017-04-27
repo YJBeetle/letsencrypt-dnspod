@@ -542,7 +542,7 @@ main()
       done
       challenge_count="${idx}"
 
-      # Respond to challenges
+      #应用验证
       reqstatus="valid"
       idx=0
       if [ ${challenge_count} -ne 0 ]; then
@@ -566,13 +566,13 @@ main()
           sleep 15
           echo "[done]"
 
-          # Ask the acme-server to verify our challenge and wait until it is no longer pending
-          echo " + Responding to challenge for ${altname}..."
+          #请求acme服务器进行验证挑战
+          echo -n "验证挑战：${altname}..."
           result="$(signed_request "${challenge_uris[${idx}]}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
 
           reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
 
-          while [[ "${reqstatus}" = "pending" ]]; do
+          while [[ "${reqstatus}" = "pending" ]]; do  #如果失败用get方式再试一次
             sleep 1
             result="$(http_request get "${challenge_uris[${idx}]}")"
             reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
@@ -582,9 +582,9 @@ main()
           idx=$((idx+1))
 
           if [[ "${reqstatus}" = "valid" ]]; then
-            echo " + Challenge is valid!"
+            echo "[valid]"
           else
-            echo "挑战失败"
+            echo "[pending]"
           fi
         done
       fi
