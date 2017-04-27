@@ -28,7 +28,9 @@ deploy_challenge() {
     }
     echo "[done]"
 
+    echo -n '等待15s以便生效...'
     sleep 15
+    echo "[done]"
 }
 
 clean_challenge() {

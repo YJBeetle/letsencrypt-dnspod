@@ -416,18 +416,18 @@ main()
   for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
     IFS="${ORIGIFS}"
     domain="$(printf '%s\n' "${line}" | cut -d' ' -f1)"
-    record="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
-    morenames=$record
+    records="$(printf '%s\n' "${line}" | cut -s -d' ' -f2-)"
+    morenames=$records
     cert="${CERTDIR}/${domain}/cert.pem"
 
-    echo "处理[${domain} ${record}]"
+    echo "处理[${domain} ${records}]"
 
     force_renew="no"
     if [[ -e "${cert}" ]]; then
       echo -n "检查变更..."
 
       certnames="$(openssl x509 -in "${cert}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
-      givennames="$(echo "${record}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
+      givennames="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
 
       if [[ "${certnames}" = "${givennames}" ]]; then
         echo "[unchanged]"
@@ -451,7 +451,7 @@ main()
 
     if [[ -e "${cert}" ]] && [[ "${force_renew}" = "yes" ]] || [[ ! -e "${cert}" ]]; then
       #开始签名域名
-      altnames="$(echo "${record}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | tr '\n' ' ')"
+      altnames="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | tr '\n' ' ')"
       timestamp="$(date +%s)"
 
       echo "开始签名域名..."
