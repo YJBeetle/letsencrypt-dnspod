@@ -515,13 +515,15 @@ main()
 
         echo -n "获取验证token..."
         if [[ -z "${challenge_token}" ]]; then
-          exiterr "[fail]"
+          echo '[fail]'
+          exiterr "验证token获取失败"
         fi
         echo "[$challenge_token]"
 
-        echo -n "获取验证_uri..."
+        echo -n "获取验证uri..."
         if [[ -z "${challenge_uri}" ]]; then
-          exiterr "[fail]"
+          echo '[fail]'
+          exiterr "验证uri获取失败"
         fi
         echo "[$challenge_uri]"
 
