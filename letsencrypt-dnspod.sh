@@ -405,7 +405,6 @@ main()
     
 
   HOOK="./hook.sh"
-  CHALLENGETYPE="dns-01"
   PARAM_DOMAIN="${record}.${domain}"
 
   DOMAINS_TXT="${BASEDIR}/domains.txt"
@@ -517,7 +516,7 @@ main()
         #提取数据
         challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
         repl=$'\n''{' # fix syntax highlighting in Vim
-        challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""${CHALLENGETYPE}"\")"
+        challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""dns-01"\")"  #获取type为dns-01的条目
         challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
         challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
 
