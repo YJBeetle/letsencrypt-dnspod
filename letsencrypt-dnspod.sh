@@ -400,10 +400,6 @@ main()
       echo "[$record_id]"
   fi
 
-
-
-  PARAM_DOMAIN="${record}.${domain}"
-
   DOMAINS_TXT="${BASEDIR}/domains.txt"
 
   #开始生成证书
