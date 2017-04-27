@@ -583,7 +583,7 @@ main()
           if [[ "${reqstatus}" = "valid" ]]; then
             echo " + Challenge is valid!"
           else
-            [[ -n "${HOOK}" ]] && "${HOOK}" "invalid_challenge" "${altname}" "${result}"
+            echo "挑战失败"
           fi
         done
       fi
