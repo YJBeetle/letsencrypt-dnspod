@@ -514,15 +514,24 @@ main()
           continue  #已经验证过，跳过循环
         fi
 
+        #提取数据
         challenges="$(printf '%s\n' "${response}" | sed -n 's/.*\("challenges":[^\[]*\[[^]]*]\).*/\1/p')"
         repl=$'\n''{' # fix syntax highlighting in Vim
         challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""${CHALLENGETYPE}"\")"
         challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
         challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
 
-        if [[ -z "${challenge_token}" ]] || [[ -z "${challenge_uri}" ]]; then
-          _exiterr "Can't retrieve challenges (${response})"
+        echo -n "获取验证token..."
+        if [[ -z "${challenge_token}" ]]; then
+          exiterr "[fail]"
         fi
+        echo "[$challenge_token]"
+
+        echo -n "获取验证_uri..."
+        if [[ -z "${challenge_uri}" ]]; then
+          exiterr "[fail]"
+        fi
+        echo "[$challenge_uri]"
 
         # Challenge response consists of the challenge token and the thumbprint of our public certificate
         keyauth="${challenge_token}.${thumbprint}"
