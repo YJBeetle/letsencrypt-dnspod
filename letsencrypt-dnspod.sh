@@ -452,7 +452,6 @@ main()
             domain_id=${return}
             echo "[${domain_id}]"
 
-            echo "开始逐个处理record"
             #逐个请求验证并获取令牌
             for record in ${records}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
@@ -508,24 +507,18 @@ main()
                     echo "[done]"
 
                     #请求acme服务器进行验证
-                    echo -n "请求acme服务器进行验证：${altname}..."
+                    echo -n "请求acme服务器进行验证..."
                     result="$(signed_request "${challenge_uri}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
-
                     reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
-
                     while [[ "${reqstatus}" = "pending" ]]; do  #如果失败用get方式再试一次
                         sleep 1
                         result="$(http_request get "${challenge_uri}")"
                         reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
                     done
-
                     #在这里可加入删除txt记录的代码
-
-                    if [[ "${reqstatus}" = "valid" ]]; then
-                        echo "[valid]"
-                    else
-                        echo "[pending]"
-                        exiterr '验证失败'
+                    echo "[${reqstatus}]"
+                    if [[ ! "${reqstatus}" = "valid" ]]; then
+                        exiterr "${altname}验证失败"
                     fi
                 fi
             done
