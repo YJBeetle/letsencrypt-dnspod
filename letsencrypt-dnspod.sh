@@ -477,11 +477,8 @@ main()
       fi
       
       echo -n "生成cert.csr..."
-      SAN=""
-      for altname in ${altnames}; do
-        SAN+="DNS:${altname}, "
-      done
-      SAN="${SAN%%, }"
+      SAN="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "DNS:'"${domain}"',";else print "DNS:"$0".'"${domain}"',"}' | tr '\n' ' ')"
+      SAN="${SAN%%, }"  #去除尾部逗号
       local tmp_openssl_cnf
       tmp_openssl_cnf="$(_mktemp)"
       cat "$(openssl version -d | cut -d\" -f2)/openssl.cnf" > "${tmp_openssl_cnf}"
