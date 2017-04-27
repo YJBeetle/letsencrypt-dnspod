@@ -538,7 +538,7 @@ main()
         #生成DNS条目内容
         keyauth_hook="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
 
-        challenge_altnames[${idx}]="${altname}"
+        challenge_records[${idx}]="${record}"
         challenge_uris[${idx}]="${challenge_uri}"
         keyauths[${idx}]="${keyauth}"
         challenge_tokens[${idx}]="${challenge_token}"
@@ -558,7 +558,8 @@ main()
       reqstatus="valid"
       idx=0
       if [ ${challenge_count} -ne 0 ]; then
-        for altname in "${challenge_altnames[@]:0}"; do
+        for record in "${challenge_records[@]:0}"; do
+          altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
           challenge_token="${challenge_tokens[${idx}]}"
           keyauth="${keyauths[${idx}]}"
 

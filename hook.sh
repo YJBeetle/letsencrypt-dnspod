@@ -21,7 +21,9 @@ deploy_challenge() {
     #   be found in the $TOKEN_FILENAME file.
 
     echo -n '修改record value...'
-    return=$(modify_record "$login_token" "$domain_id" "$record_id" "_acme-challenge.$record" "${TOKEN_VALUE}") || 
+
+    acmerecord="$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')"
+    return=$(modify_record "$login_token" "$domain_id" "$record_id" "$acmerecord" "${TOKEN_VALUE}") || 
     {
         echo '[error]'
         exiterr "$return"
