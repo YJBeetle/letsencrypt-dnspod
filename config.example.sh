@@ -8,8 +8,8 @@ export domain='example.com'
 export record='www'
 
 #letsencrypt服务器设定
-#CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
-CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
+CA="https://acme-v01.api.letsencrypt.org/directory" #正式服务器
+#CA="https://acme-staging.api.letsencrypt.org/directory" #测试服务器
 
 #目录设定
 TMPDIR=
@@ -28,5 +28,4 @@ KEY_ALGO=rsa
 # Default values
 LICENSE="https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf"
 DOMAINS_D=
-HOOK_CHAIN="no"
 WELLKNOWN=

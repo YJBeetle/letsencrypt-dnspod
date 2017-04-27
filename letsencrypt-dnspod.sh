@@ -548,12 +548,6 @@ main()
       done
       challenge_count="${idx}"
 
-      # Wait for hook script to deploy the challenges if used
-      if [[ ${challenge_count} -ne 0 ]]; then
-        # shellcheck disable=SC2068
-        [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[@]}
-      fi
-
       # Respond to challenges
       reqstatus="valid"
       idx=0
@@ -565,7 +559,7 @@ main()
 
           # Wait for hook script to deploy the challenge if used
           # shellcheck disable=SC2086
-          [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[${idx}]}
+          [[ -n "${HOOK}" ]] && . "${HOOK}" "deploy_challenge" ${deploy_args[${idx}]}
 
           # Ask the acme-server to verify our challenge and wait until it is no longer pending
           echo " + Responding to challenge for ${altname}..."
@@ -580,7 +574,7 @@ main()
           done
 
           # Wait for hook script to clean the challenge if used
-          if [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && [[ -n "${challenge_token}" ]]; then
+          if [[ -n "${HOOK}" ]] && [[ -n "${challenge_token}" ]]; then
             # shellcheck disable=SC2086
             "${HOOK}" "clean_challenge" ${deploy_args[${idx}]}
           fi
@@ -589,15 +583,9 @@ main()
           if [[ "${reqstatus}" = "valid" ]]; then
             echo " + Challenge is valid!"
           else
-            [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" != "yes" ]] && "${HOOK}" "invalid_challenge" "${altname}" "${result}"
+            [[ -n "${HOOK}" ]] && "${HOOK}" "invalid_challenge" "${altname}" "${result}"
           fi
         done
-      fi
-
-      # Wait for hook script to clean the challenges if used
-      # shellcheck disable=SC2068
-      if [[ ${challenge_count} -ne 0 ]]; then
-        [[ -n "${HOOK}" ]] && [[ "${HOOK_CHAIN}" = "yes" ]] && "${HOOK}" "clean_challenge" ${deploy_args[@]}
       fi
 
       if [[ "${reqstatus}" != "valid" ]]; then
