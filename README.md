@@ -17,4 +17,5 @@ config.sh不用修改亦可正常使用，如有需求请自行对应修改。
 
 ## 关于DNSPOD
 token的设置在：DNSPOD -> 用户中心 -> 安全设置 -> API Token
+
 快捷链接：https://www.dnspod.cn/console/user/security
