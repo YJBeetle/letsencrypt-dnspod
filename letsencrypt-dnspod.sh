@@ -402,9 +402,6 @@ main()
 
 
 
-    
-
-  HOOK="./hook.sh"
   PARAM_DOMAIN="${record}.${domain}"
 
   DOMAINS_TXT="${BASEDIR}/domains.txt"
