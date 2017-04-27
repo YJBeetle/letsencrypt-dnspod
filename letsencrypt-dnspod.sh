@@ -540,8 +540,6 @@ main()
             echo "${certpem}" > "${certpem_path}"
             echo "[done]"
 
-            unset challenge_token
-
             #生成fullchain.pem
             echo -n "生成fullchain.pem..."
             cat "${certpem_path}" > "${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
