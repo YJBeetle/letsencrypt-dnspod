@@ -124,18 +124,20 @@ http_request() {
     set -e
 
     if [[ ! "${curlret}" = "0" ]]; then
-        rm -f "${tempcont}"
+        #rm -f "${tempcont}"
         exiterr "连接服务器出错(方式：${1}，地址：${2}，返回${curlret})"
     fi
 
     if [[ ! "${statuscode:0:1}" = "2" ]]; then
         tempcontstr=$(cat "${tempcont}")
-        rm -f "${tempcont}"
-        exiterr "请求服务器出错(方式：${1}，地址：${2}，状态码：${statuscode})\n详情:\n${tempcontstr}"
+        #rm -f "${tempcont}"
+        exiterr "请求服务器出错(方式：${1}，地址：${2}，状态码：${statuscode})
+HTTP错误详情:
+${tempcontstr}"
     fi
 
     cat "${tempcont}"
-    rm -f "${tempcont}"
+    #rm -f "${tempcont}"    #垃圾最后统一处理
 }
 
 # Send signed request
