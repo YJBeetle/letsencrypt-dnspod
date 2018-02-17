@@ -407,7 +407,7 @@ main()
             echo -n "  |- 检查域名到期时间..."
             valid="$(openssl x509 -enddate -noout -in "${certpem_path}" | cut -d= -f2- )"
 
-            if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${certpem_path}"; then
+            if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${certpem_path}" >&-; then
                 echo "[${valid} 证书有效]"
             else
                 force_renew="yes"
@@ -578,7 +578,7 @@ main()
 
             unset challenge_token
         else
-            echo "无须更新"
+            echo "  |-无须更新"
         fi
     done
 }
