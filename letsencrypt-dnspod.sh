@@ -458,11 +458,13 @@ main()
             echo "[${domain_id}]"
 
             #逐个请求验证并获取令牌
-            if ! echo "${records}" | grep "@" 2>/dev/null > /dev/null; then
-                records="@ ${records}"
+            if echo "${records}" | grep "@" 2>/dev/null > /dev/null; then
+                records_v="${records}"
+            else
+                records_v="@ ${records}"
             fi
-            echo "  |- 开始逐个验证：${records}"
-            for record in ${records}; do
+            echo "  |- 开始逐个验证：${records_v}"
+            for record in ${records_v}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
                 echo "   |- 请求验证：${altname}"
 
