@@ -456,7 +456,7 @@ main()
 
             #逐个请求验证并获取令牌
             for record in ${records}; do
-                altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
+                altname="$(echo "${record}"| awk '{if($0=="@"||$0=="*")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
                 echo "处理record[${altname}]"
 
                 #向acme服务器请求新的验证，并从json中提取信息
@@ -487,7 +487,7 @@ main()
                     keyauth_dnspod="$(printf '%s' "${keyauth}" | openssl dgst -sha256 -binary | urlbase64)"
 
                     #去dnspod修改
-                    record_acme="$(echo "${record}"| awk '{if($0=="@")print "_acme-challenge";else print "_acme-challenge."$0}')"
+                    record_acme="$(echo "${record}"| awk '{if($0=="@"||$0=="*")print "_acme-challenge";else print "_acme-challenge."$0}')"
                     echo -n '获取dnspod record_id...'
                     return=$(get_record_id "${login_token}" "${domain_id}" "${record_acme}") || (echo '[error]'; exiterr "${return}")
                     record_id=${return}
