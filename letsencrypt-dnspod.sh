@@ -407,7 +407,7 @@ main()
             echo -n "  |- 检查域名到期时间..."
             valid="$(openssl x509 -enddate -noout -in "${certpem_path}" | cut -d= -f2- )"
 
-            if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${certpem_path}" >&-; then
+            if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${certpem_path}" 2>/dev/null > /dev/null; then
                 echo "[${valid} 证书有效]"
             else
                 force_renew="yes"
@@ -458,7 +458,7 @@ main()
             echo "[${domain_id}]"
 
             #逐个请求验证并获取令牌
-            if ! echo $records | grep "@" >&-; then
+            if ! echo "${records}" | grep "@" 2>/dev/null > /dev/null; then
                 records="@ ${records}"
             fi
             echo "  |- 开始逐个验证：${records}"
