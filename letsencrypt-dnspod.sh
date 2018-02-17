@@ -455,8 +455,8 @@ main()
             echo "[${domain_id}]"
 
             #逐个请求验证并获取令牌
-            for record in ${records}; do
-                altname="$(echo "${record}"| awk '{if($0=="@"||$0=="*")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
+            for record in "${records}"; do
+                altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
                 echo "处理record[${altname}]"
 
                 #向acme服务器请求新的验证，并从json中提取信息
