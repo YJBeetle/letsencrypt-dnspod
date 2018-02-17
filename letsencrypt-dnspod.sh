@@ -455,7 +455,7 @@ main()
             echo "[${domain_id}]"
 
             #逐个请求验证并获取令牌
-            for record in "${records}"; do
+            for record in ${records}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
                 echo "处理record[${altname}]"
 
