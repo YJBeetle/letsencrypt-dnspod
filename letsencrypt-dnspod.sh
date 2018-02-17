@@ -578,7 +578,7 @@ main()
 
             unset challenge_token
         else
-            echo "  |-无须更新"
+            echo "  |- 无须更新"
         fi
     done
 }
