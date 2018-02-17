@@ -322,32 +322,34 @@ modify_record()
 
 main()
 {
-    echo -n '读取配置...'
+    echo "Let's Encrypt!"
+
+    echo -n '|- 读取配置...'
     loadcfg
     echo '[done]'
 
-    echo -n '检查依赖...'
+    echo -n '|- 检查依赖...'
     check_dependencies
     echo '[done]'
 
-    echo -n '初始化...'
+    echo -n '|- 初始化...'
     init
     echo '[done]'
 
     #检查帐号私钥
-    echo -n '检查帐号私钥...'
+    echo -n '|- 检查帐号私钥...'
     register_new_key="no" #用于判定是否是新生成的
     if [[ ! -e "${ACCOUNT_KEY}" ]]; then  #如果帐号私钥不存在则生成一个新的密钥（rsa密钥）
         echo '[null]'
 
-        echo -n "生成新帐号密钥..."
+        echo -n " |- 生成新帐号密钥..."
         _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
         register_new_key="yes"
     fi
     openssl rsa -in "${ACCOUNT_KEY}" -check 2>/dev/null > /dev/null || exiterr "帐号私钥无效，请尝试删除account文件夹，重新生成帐号私钥"
     echo '[done]'
 
-    echo -n '从私钥获取公钥件并计算指纹...'
+    echo -n '|- 从私钥获取公钥件并计算指纹...'
     pubExponent64="$(printf '%x' "$(openssl rsa -in "${ACCOUNT_KEY}" -noout -text | awk '/publicExponent/ {print $2}')" | hex2bin | urlbase64)"
     pubMod64="$(openssl rsa -in "${ACCOUNT_KEY}" -noout -modulus | cut -d'=' -f2 | hex2bin | urlbase64)"
     thumbprint="$(printf '{"e":"%s","kty":"RSA","n":"%s"}' "${pubExponent64}" "${pubMod64}" | openssl dgst -sha256 -binary | urlbase64)"
@@ -355,7 +357,7 @@ main()
 
     #如果刚刚密钥是新生成的，则必须在acme服务器注册
     if [[ "${register_new_key}" = "yes" ]]; then
-        echo -n "在ACME服务器注册新帐号密钥..."
+        echo -n " |- 在ACME服务器注册新帐号密钥..."
         [[ ! -z "${CA_NEW_REG}" ]] || exiterr "证书颁发机构不允许注册"
         
         if [[ -n "${CONTACT_EMAIL}" ]]; then  #如果提供了联系人的电子邮件，添加到注册请求
@@ -374,6 +376,7 @@ main()
     DOMAINS_TXT="${BASEDIR}/domains.txt"
 
     #开始读取domains.txt并且逐个处理
+    echo "|- 读取域名配置文件[${DOMAINS_TXT}]"
     ORIGIFS="${IFS}"
     IFS=$'\n'
     for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
@@ -382,12 +385,12 @@ main()
         domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
         records="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
 
-        echo "处理domain[${domain}]"
+        echo " |- 处理domain[${domain}]"
 
         force_renew="no"
         certpem_path="${CERTDIR}/${domain}/cert.pem"
         if [[ -e "${certpem_path}" ]]; then
-            echo -n "检查证书DNS名称变更..."
+            echo -n "  |- 检查证书DNS名称变更..."
 
             certnames="$(openssl x509 -in "${certpem_path}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
             givennames="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
@@ -401,7 +404,7 @@ main()
         fi
 
         if [[ -e "${certpem_path}" ]]; then
-            echo -n "检查域名到期时间..."
+            echo -n "  |- 检查域名到期时间..."
             valid="$(openssl x509 -enddate -noout -in "${certpem_path}" | cut -d= -f2- )"
 
             if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${certpem_path}"; then
@@ -420,14 +423,14 @@ main()
             fi
 
             if [[ ! -e "${CERTDIR}/${domain}" ]]; then
-                echo -n "首次创建目录：${CERTDIR}/${domain}..."
+                echo -n "  |- 创建目录：${CERTDIR}/${domain}..."
                 mkdir -p "${CERTDIR}/${domain}" || (echo "[error]"; exiterr "创建失败${CERTDIR}/${domain}")
                 echo "[done]"
             fi
 
             privkey_path="${CERTDIR}/${domain}/privkey.pem"
             if [[ ! -r "${privkey_path}" ]]; then   #如果存在并且可写则无须重新生成
-                echo -n "首次生成privkey.pem..."
+                echo -n "  |- 创建privkey.pem..."
                 privkey_path="${CERTDIR}/${domain}/privkey-${timestamp}.pem"
                 case "${KEY_ALGO}" in
                     rsa) _openssl genrsa -out "${privkey_path}" "${KEYSIZE}";;
@@ -436,7 +439,7 @@ main()
                 echo "[done]"
             fi
         
-            echo -n "生成cert.csr..."
+            echo -n "  |- 创建cert.csr..."
             certcsr_path="${CERTDIR}/${domain}/cert-${timestamp}.csr"
             SAN="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "DNS:'"${domain}"',";else print "DNS:"$0".'"${domain}"',"}' | tr '\n' ' ')"
             SAN="${SAN%%, }"    #去除尾部逗号
@@ -449,18 +452,20 @@ main()
             echo "[done]"
 
             #dnspod请求
-            echo -n '获取dnspod domain_id...'
+            echo -n '  |- 获取dnspod domain_id...'
             return=$(get_domain_id "${login_token}" "${domain}") || (echo '[error]'; exiterr "${return}")
             domain_id=${return}
             echo "[${domain_id}]"
 
             #逐个请求验证并获取令牌
+            echo "  |- 开始处理records[${records}]"
             for record in ${records}; do
+                echo "   |- 处理record[${record}]"
+
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
-                echo "处理record[${altname}]"
 
                 #向acme服务器请求新的验证，并从json中提取信息
-                echo -n "请求验证..."
+                echo -n "   |- 请求验证..."
                 response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
                 challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
                 echo "[${challenge_status}]"
@@ -526,24 +531,24 @@ main()
             done
 
             #最后，从acme服务器请求证书，存储到cert.pem
-            echo -n "申请证书..."
+            echo -n "  |- 申请证书..."
             csr64="$( <<<"${certcsr}" openssl req -outform DER | urlbase64)"
             crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | openssl base64 -e)"
             certpem="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
             echo "[done]"
 
             #尝试加载证书以检测损坏
-            echo -n "检查证书..."
+            echo -n "  |- 检查证书..."
             _openssl x509 -text <<<"${certpem}"
             echo "[done]"
 
-            echo -n "写入cert.pem..."
+            echo -n "  |- 写入cert.pem..."
             certpem_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
             echo "${certpem}" > "${certpem_path}"
             echo "[done]"
 
             #chain.pem
-            echo -n "生成fullchain.pem..."
+            echo -n "  |- 生成fullchain.pem..."
             chainpem_path="${CERTDIR}/${domain}/chain-${timestamp}.pem"
             tmpchain="$(_mktemp)"
             http_request get "$(openssl x509 -in "${CERTDIR}/${domain}/cert-${timestamp}.pem" -noout -text | grep 'CA Issuers - URI:' | cut -d':' -f2-)" > "${tmpchain}"
@@ -556,14 +561,14 @@ main()
             echo "[done]"
 
             #生成fullchain.pem
-            echo -n "写入fullchain.pem..."
+            echo -n "  |- 写入fullchain.pem..."
             fullchainpem_path="${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
             cat "${certpem_path}" > "${fullchainpem_path}"
             cat "${chainpem_path}" >> "${fullchainpem_path}"
             echo "[Done]"
 
             #更新符号连接
-            echo -n "更新符号连接..."
+            echo -n "  |- 更新符号连接..."
             [[ "${privkey_path}" = "${CERTDIR}/${domain}/privkey.pem" ]] || ln -sf "privkey-${timestamp}.pem" "${CERTDIR}/${domain}/privkey.pem"
             ln -sf "chain-${timestamp}.pem" "${CERTDIR}/${domain}/chain.pem"
             ln -sf "fullchain-${timestamp}.pem" "${CERTDIR}/${domain}/fullchain.pem"
