@@ -461,10 +461,10 @@ main()
             echo "  |- 开始逐个验证：${records}"
             for record in ${records}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
-                echo "   |- 检查验证：${altname}"
+                echo "   |- 请求验证：${altname}"
 
                 #向acme服务器请求新的验证，并从json中提取信息
-                echo -n "   |- 请求验证..."
+                echo -n "    |- 检查验证..."
                 response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
                 challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
                 echo "[${challenge_status}]"
