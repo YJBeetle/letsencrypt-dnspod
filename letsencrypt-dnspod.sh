@@ -376,7 +376,7 @@ main()
     DOMAINS_TXT="${BASEDIR}/domains.txt"
 
     #开始读取domains.txt并且逐个处理
-    echo "|- 读取域名配置文件[${DOMAINS_TXT}]"
+    echo "|- 读取域名配置文件：${DOMAINS_TXT}"
     ORIGIFS="${IFS}"
     IFS=$'\n'
     for line in $(<"${DOMAINS_TXT}" tr -d '\r' | tr '[:upper:]' '[:lower:]' | _sed -e 's/^[[:space:]]*//g' -e 's/[[:space:]]*$//g' -e 's/[[:space:]]+/ /g' | (grep -vE '^(#|$)' || true)); do
@@ -385,7 +385,7 @@ main()
         domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
         records="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
 
-        echo " |- 处理domain[${domain}]"
+        echo " |- 开始处理：${domain}"
 
         force_renew="no"
         certpem_path="${CERTDIR}/${domain}/cert.pem"
@@ -452,17 +452,16 @@ main()
             echo "[done]"
 
             #dnspod请求
-            echo -n '  |- 获取dnspod domain_id...'
+            echo -n "  |- 在DNSPod获取domain_id..."
             return=$(get_domain_id "${login_token}" "${domain}") || (echo '[error]'; exiterr "${return}")
             domain_id=${return}
             echo "[${domain_id}]"
 
             #逐个请求验证并获取令牌
-            echo "  |- 开始处理records[${records}]"
+            echo "  |- 开始逐个验证：${records}"
             for record in ${records}; do
-                echo "   |- 处理record[${record}]"
-
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
+                echo "   |- 检查验证：${altname}"
 
                 #向acme服务器请求新的验证，并从json中提取信息
                 echo -n "   |- 请求验证..."
@@ -493,24 +492,24 @@ main()
 
                     #去dnspod修改
                     record_acme="$(echo "${record}"| awk '{if($0=="@"||$0=="*")print "_acme-challenge";else print "_acme-challenge."$0}')"
-                    echo -n '    |- 获取dnspod record_id...'
+                    echo -n '    |- 在DNSPod获取record_id...'
                     return=$(get_record_id "${login_token}" "${domain_id}" "${record_acme}") || (echo '[error]'; exiterr "${return}")
                     record_id=${return}
                     if [ "${record_id}" = '' ]; then
                         echo '[null]'
 
-                        echo -n '     |- 没有找到record，创建新的并获取id...'
+                        echo -n '     |- 没有找到该record，创建新的并获取id...'
                         return=$(create_record "${login_token}" "${domain_id}" "${record_acme}") || (echo '[error]'; exiterr "${return}")
                         record_id=${return}
                     fi
                     echo "[${record_id}]"
 
-                    echo -n '    |- 修改dnspod record value...'
+                    echo -n '    |- 在DNSPod修改record为验证Token...'
                     return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${record_acme}" "${keyauth_dnspod}") || (echo '[error]'; exiterr "${return}")
                     echo "[done]"
 
-                    echo -n '    |- 等待15s以便生效...'
-                    sleep 15
+                    echo -n '    |- 等待18s以便生效...'
+                    sleep 18
                     echo "[done]"
 
                     #请求acme服务器进行验证
