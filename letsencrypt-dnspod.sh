@@ -342,7 +342,7 @@ main()
     if [[ ! -e "${ACCOUNT_KEY}" ]]; then  #如果帐号私钥不存在则生成一个新的密钥（rsa密钥）
         echo '[null]'
 
-        echo -n " |- 生成新帐号密钥..."
+        echo -n "||- 生成新帐号密钥..."
         _openssl genrsa -out "${ACCOUNT_KEY}" "${KEYSIZE}"
         register_new_key="yes"
     fi
@@ -357,7 +357,7 @@ main()
 
     #如果刚刚密钥是新生成的，则必须在acme服务器注册
     if [[ "${register_new_key}" = "yes" ]]; then
-        echo -n " |- 在ACME服务器注册新帐号密钥..."
+        echo -n "||- 在ACME服务器注册新帐号密钥..."
         [[ ! -z "${CA_NEW_REG}" ]] || exiterr "证书颁发机构不允许注册"
         
         if [[ -n "${CONTACT_EMAIL}" ]]; then  #如果提供了联系人的电子邮件，添加到注册请求
@@ -385,12 +385,12 @@ main()
         domain="$(printf '%s\n' "${line}" | cut -d' ' -f2)"
         records="$(printf '%s\n' "${line}" | cut -s -d' ' -f3-)"
 
-        echo " |- 开始处理：${domain}"
+        echo "||- 开始处理：${domain}"
 
         force_renew="no"
         certpem_path="${CERTDIR}/${domain}/cert.pem"
         if [[ -e "${certpem_path}" ]]; then
-            echo -n "  |- 检查证书DNS名称变更..."
+            echo -n "|||- 检查证书DNS名称变更..."
 
             certnames="$(openssl x509 -in "${certpem_path}" -text -noout | grep DNS: | _sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | sort -u | tr '\n' ' ' | _sed 's/ $//')"
             givennames="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}' | sort -u | tr '\n' ' ' | _sed 's/ $//' | _sed 's/^ //')"
@@ -404,7 +404,7 @@ main()
         fi
 
         if [[ -e "${certpem_path}" ]]; then
-            echo -n "  |- 检查域名到期时间..."
+            echo -n "|||- 检查域名到期时间..."
             valid="$(openssl x509 -enddate -noout -in "${certpem_path}" | cut -d= -f2- )"
 
             if openssl x509 -checkend $((RENEW_DAYS * 86400)) -noout -in "${certpem_path}" 2>/dev/null > /dev/null; then
@@ -423,14 +423,14 @@ main()
             fi
 
             if [[ ! -e "${CERTDIR}/${domain}" ]]; then
-                echo -n "  |- 创建目录：${CERTDIR}/${domain}..."
+                echo -n "|||- 创建目录：${CERTDIR}/${domain}..."
                 mkdir -p "${CERTDIR}/${domain}" || (echo "[error]"; exiterr "创建失败${CERTDIR}/${domain}")
                 echo "[done]"
             fi
 
             privkey_path="${CERTDIR}/${domain}/privkey.pem"
             if [[ ! -r "${privkey_path}" ]]; then   #如果存在并且可写则无须重新生成
-                echo -n "  |- 创建privkey.pem..."
+                echo -n "|||- 创建privkey.pem..."
                 privkey_path="${CERTDIR}/${domain}/privkey-${timestamp}.pem"
                 case "${KEY_ALGO}" in
                     rsa) _openssl genrsa -out "${privkey_path}" "${KEYSIZE}";;
@@ -439,7 +439,7 @@ main()
                 echo "[done]"
             fi
         
-            echo -n "  |- 创建cert.csr..."
+            echo -n "|||- 创建cert.csr..."
             certcsr_path="${CERTDIR}/${domain}/cert-${timestamp}.csr"
             SAN="$(echo "${records}"| tr ' ' '\n' | awk '{if($0=="@")print "DNS:'"${domain}"',";else print "DNS:"$0".'"${domain}"',"}' | tr '\n' ' ')"
             SAN="${SAN%%, }"    #去除尾部逗号
@@ -452,7 +452,7 @@ main()
             echo "[done]"
 
             #dnspod请求
-            echo -n "  |- 在DNSPod获取domain_id..."
+            echo -n "|||- 在DNSPod获取domain_id..."
             return=$(get_domain_id "${login_token}" "${domain}") || (echo '[error]'; exiterr "${return}")
             domain_id=${return}
             echo "[${domain_id}]"
@@ -463,13 +463,13 @@ main()
             else
                 records_v="@ ${records}"
             fi
-            echo "  |- 开始逐个验证：${records_v}"
+            echo "|||- 开始逐个验证：${records_v}"
             for record in ${records_v}; do
                 altname="$(echo "${record}"| awk '{if($0=="@")print "'"${domain}"'";else print $0".'"${domain}"'"}')"
-                echo "   |- 请求验证：${altname}"
+                echo "||||- 请求验证：${altname}"
 
                 #向acme服务器请求新的验证，并从json中提取信息
-                echo -n "    |- 检查验证..."
+                echo -n "|||||- 检查验证..."
                 response="$(signed_request "${CA_NEW_AUTHZ}" '{"resource": "new-authz", "identifier": {"type": "dns", "value": "'"${altname}"'"}}' | clean_json)"
                 challenge_status="$(printf '%s' "${response}" | rm_json_arrays | get_json_string_value status)"
                 echo "[${challenge_status}]"
@@ -480,12 +480,12 @@ main()
                     repl=$'\n''{' # fix syntax highlighting in Vim
                     challenge="$(printf "%s" "${challenges//\{/${repl}}" | grep \""dns-01"\")"  #获取type为dns-01的条目
 
-                    echo -n "    |- 获取验证Token..."
+                    echo -n "|||||- 获取验证Token..."
                     challenge_token="$(printf '%s' "${challenge}" | get_json_string_value token | _sed 's/[^A-Za-z0-9_\-]/_/g')"
                     [[ -z "${challenge_token}" ]] && (echo '[fail]'; exiterr "token获取失败")
                     echo "[${challenge_token}]"
 
-                    echo -n "    |- 获取验证URL..."
+                    echo -n "|||||- 获取验证URL..."
                     challenge_uri="$(printf '%s' "${challenge}" | get_json_string_value uri)"
                     [[ -z "${challenge_uri}" ]] && (echo '[fail]'; exiterr "uri获取失败")
                     echo "[${challenge_uri}]"
@@ -497,28 +497,28 @@ main()
 
                     #去dnspod修改
                     record_acme="$(echo "${record}"| awk '{if($0=="@"||$0=="*")print "_acme-challenge";else print "_acme-challenge."$0}')"
-                    echo -n '    |- 在DNSPod获取record_id...'
+                    echo -n '|||||- 在DNSPod获取record_id...'
                     return=$(get_record_id "${login_token}" "${domain_id}" "${record_acme}") || (echo '[error]'; exiterr "${return}")
                     record_id=${return}
                     if [ "${record_id}" = '' ]; then
                         echo '[null]'
 
-                        echo -n '     |- 没有找到该record，创建新的并获取id...'
+                        echo -n '||||||- 没有找到该record，创建新的并获取id...'
                         return=$(create_record "${login_token}" "${domain_id}" "${record_acme}") || (echo '[error]'; exiterr "${return}")
                         record_id=${return}
                     fi
                     echo "[${record_id}]"
 
-                    echo -n '    |- 在DNSPod修改record为验证Token...'
+                    echo -n '|||||- 在DNSPod修改record为验证Token...'
                     return=$(modify_record "${login_token}" "${domain_id}" "${record_id}" "${record_acme}" "${keyauth_dnspod}") || (echo '[error]'; exiterr "${return}")
                     echo "[done]"
 
-                    echo -n '    |- 等待18s以便生效...'
+                    echo -n '|||||- 等待18s以便生效...'
                     sleep 18
                     echo "[done]"
 
                     #请求acme服务器进行验证
-                    echo -n "    |- 请求acme服务器进行验证..."
+                    echo -n "|||||- 请求acme服务器进行验证..."
                     result="$(signed_request "${challenge_uri}" '{"resource": "challenge", "keyAuthorization": "'"${keyauth}"'"}' | clean_json)"
                     reqstatus="$(printf '%s\n' "${result}" | get_json_string_value status)"
                     while [[ "${reqstatus}" = "pending" ]]; do  #如果失败用get方式再试一次
@@ -535,24 +535,24 @@ main()
             done
 
             #最后，从acme服务器请求证书，存储到cert.pem
-            echo -n "  |- 申请证书..."
+            echo -n "|||- 申请证书..."
             csr64="$( <<<"${certcsr}" openssl req -outform DER | urlbase64)"
             crt64="$(signed_request "${CA_NEW_CERT}" '{"resource": "new-cert", "csr": "'"${csr64}"'"}' | openssl base64 -e)"
             certpem="$( printf -- '-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n' "${crt64}" )"
             echo "[done]"
 
             #尝试加载证书以检测损坏
-            echo -n "  |- 检查证书..."
+            echo -n "|||- 检查证书..."
             _openssl x509 -text <<<"${certpem}"
             echo "[done]"
 
-            echo -n "  |- 写入cert.pem..."
+            echo -n "|||- 写入cert.pem..."
             certpem_path="${CERTDIR}/${domain}/cert-${timestamp}.pem"
             echo "${certpem}" > "${certpem_path}"
             echo "[done]"
 
             #chain.pem
-            echo -n "  |- 生成fullchain.pem..."
+            echo -n "|||- 生成fullchain.pem..."
             chainpem_path="${CERTDIR}/${domain}/chain-${timestamp}.pem"
             tmpchain="$(_mktemp)"
             http_request get "$(openssl x509 -in "${CERTDIR}/${domain}/cert-${timestamp}.pem" -noout -text | grep 'CA Issuers - URI:' | cut -d':' -f2-)" > "${tmpchain}"
@@ -565,14 +565,14 @@ main()
             echo "[done]"
 
             #生成fullchain.pem
-            echo -n "  |- 写入fullchain.pem..."
+            echo -n "|||- 写入fullchain.pem..."
             fullchainpem_path="${CERTDIR}/${domain}/fullchain-${timestamp}.pem"
             cat "${certpem_path}" > "${fullchainpem_path}"
             cat "${chainpem_path}" >> "${fullchainpem_path}"
             echo "[Done]"
 
             #更新符号连接
-            echo -n "  |- 更新符号连接..."
+            echo -n "|||- 更新符号连接..."
             [[ "${privkey_path}" = "${CERTDIR}/${domain}/privkey.pem" ]] || ln -sf "privkey-${timestamp}.pem" "${CERTDIR}/${domain}/privkey.pem"
             ln -sf "chain-${timestamp}.pem" "${CERTDIR}/${domain}/chain.pem"
             ln -sf "fullchain-${timestamp}.pem" "${CERTDIR}/${domain}/fullchain.pem"
@@ -582,9 +582,10 @@ main()
 
             unset challenge_token
         else
-            echo "  |- 无须更新"
+            echo "|||- 无须更新"
         fi
     done
+    echo "|- 完毕"
 }
 
 loadcfg()
