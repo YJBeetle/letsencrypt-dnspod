@@ -20,6 +20,14 @@ token的设置在：DNSPOD -> 用户中心 -> 安全设置 -> API Token
 
 快捷链接：https://www.dnspod.cn/console/user/security
 
+## 按时更新
+
+每月一次
+
+```
+echo '*/1 1 1 * * root /bin/bash /opt/letsencrypt/letsencrypt-dnspod.sh >>/var/log/letsencrypt.log 2>&1' > /etc/cron.d/letsencrypt
+```
+
 ## 使用
 
 ### Nginx
